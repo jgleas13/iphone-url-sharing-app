@@ -5,7 +5,7 @@ A modern web application that allows you to easily save and summarize URLs direc
 ## Features
 
 - **iOS URL Sharing**: Share URLs directly from your iPhone using an iOS Shortcut
-- **AI Summarization**: Automatically generate concise summaries of webpage content using Grok AI
+- **AI Summarization**: Automatically generate concise summaries of webpage content using OpenAI
 - **Tag Generation**: Automatically detect and assign tags based on content type
 - **Modern Dashboard**: View all saved URLs in a clean, organized interface
 - **Google Authentication**: Secure sign-in using Google via Supabase
@@ -22,7 +22,7 @@ A modern web application that allows you to easily save and summarize URLs direc
 - Node.js
 - Express
 - PostgreSQL (via Supabase)
-- Grok AI Summarization API
+- OpenAI API for Summarization
 
 ### Deployment
 - Vercel
@@ -34,7 +34,7 @@ A modern web application that allows you to easily save and summarize URLs direc
 - Node.js (LTS version)
 - npm or yarn
 - Supabase account
-- Grok AI API access
+- OpenAI API access
 
 ### Installation
 
@@ -61,8 +61,8 @@ A modern web application that allows you to easily save and summarize URLs direc
      PORT=3001
      SUPABASE_URL=your_supabase_url
      SUPABASE_KEY=your_supabase_key
-     GROK_API_URL=your_grok_api_url
-     GROK_API_KEY=your_grok_api_key
+     OPENAI_API_KEY=your_openai_api_key
+     OPENAI_MODEL=gpt-4-turbo
      FRONTEND_URL=http://localhost:3000
      ```
    - Create a `.env.local` file in the `frontend` directory with the following variables:

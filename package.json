@@ -1,0 +1,21 @@
+{
+  "name": "iphone-url-sharing",
+  "version": "1.0.0",
+  "description": "App to save and summarize URLs shared from iPhone",
+  "private": true,
+  "scripts": {
+    "dev": "./start-dev-environment.sh",
+    "dev:frontend": "cd frontend && npm run dev:3000",
+    "dev:backend": "cd backend && npm run dev",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "start": "cd frontend && npm run start"
+  },
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "author": "",
+  "license": "ISC"
+} 

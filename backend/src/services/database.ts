@@ -24,7 +24,13 @@ export async function saveUrl(urlData: UrlEntry): Promise<UrlEntry> {
     // In a real implementation, this would insert data into Supabase
     // For now, we'll simulate a response
     
-    console.log('Saving URL to database:', urlData);
+    console.log('[Database] Saving URL to database');
+    console.log(`[Database] URL: ${urlData.url}`);
+    console.log(`[Database] Page title: ${urlData.pageTitle}`);
+    console.log(`[Database] Date accessed: ${urlData.dateAccessed}`);
+    console.log(`[Database] Summary: ${urlData.summary.substring(0, 50)}${urlData.summary.length > 50 ? '...' : ''}`);
+    console.log(`[Database] Processing status: ${urlData.processingStatus}`);
+    console.log(`[Database] Tags: ${urlData.tags.join(', ')}`);
     
     // Simulate database operation delay
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -35,6 +41,7 @@ export async function saveUrl(urlData: UrlEntry): Promise<UrlEntry> {
       ...urlData
     };
     
+    console.log(`[Database] URL saved successfully with ID: ${savedUrl.id}`);
     return savedUrl;
     
     // Actual Supabase implementation would be:
@@ -49,7 +56,7 @@ export async function saveUrl(urlData: UrlEntry): Promise<UrlEntry> {
     return data;
     */
   } catch (error) {
-    console.error('Error saving URL to database:', error);
+    console.error('[Database] Error saving URL to database:', error);
     throw new Error('Failed to save URL to database');
   }
 }
@@ -63,7 +70,7 @@ export async function getUrls(): Promise<UrlEntry[]> {
     // In a real implementation, this would query data from Supabase
     // For now, we'll simulate a response
     
-    console.log('Retrieving URLs from database');
+    console.log('[Database] Retrieving URLs from database');
     
     // Simulate database operation delay
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -90,6 +97,7 @@ export async function getUrls(): Promise<UrlEntry[]> {
       }
     ];
     
+    console.log(`[Database] Retrieved ${urls.length} URLs`);
     return urls;
     
     // Actual Supabase implementation would be:
@@ -103,7 +111,7 @@ export async function getUrls(): Promise<UrlEntry[]> {
     return data || [];
     */
   } catch (error) {
-    console.error('Error retrieving URLs from database:', error);
+    console.error('[Database] Error retrieving URLs from database:', error);
     throw new Error('Failed to retrieve URLs from database');
   }
 } 

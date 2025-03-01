@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import LinkCard from './LinkCard';
 import FilterSortBar from './FilterSortBar';
 import AddUrlForm from './AddUrlForm';
+import { useAuth } from './AuthProvider';
+import Link from 'next/link';
 
 interface UrlEntry {
   id: string;
@@ -11,11 +13,12 @@ interface UrlEntry {
   pageTitle: string;
   dateAccessed: string;
   summary: string;
-  processingStatus: string;
+  processingStatus?: string;
   tags: string[];
 }
 
 export default function UrlList() {
+  const { user, isLoading: authLoading } = useAuth();
   const [urls, setUrls] = useState<UrlEntry[]>([]);
   const [filteredUrls, setFilteredUrls] = useState<UrlEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,17 +36,42 @@ export default function UrlList() {
   
   // Fetch URLs from the API
   const fetchUrls = async () => {
+    if (!user) return;
+    
     try {
       setLoading(true);
       const response = await fetch('/api/urls');
       
       if (!response.ok) {
+        if (response.status === 401) {
+          setError('You need to be logged in to view your URLs.');
+          setLoading(false);
+          return;
+        }
         throw new Error(`Error fetching URLs: ${response.statusText}`);
       }
       
       const data = await response.json();
-      setUrls(data);
-      setFilteredUrls(data);
+      
+      // Transform the data from database format to component format
+      const transformedData = data.map((item: any) => ({
+        id: item.id,
+        url: item.url,
+        pageTitle: item.page_title || item.url,
+        dateAccessed: item.date_accessed || new Date().toISOString(),
+        summary: item.summary || '',
+        processingStatus: 'completed', // Default to completed since this field doesn't exist in DB
+        tags: item.tags || []
+      }));
+      
+      console.log('[UrlList] Transformed URL data:', JSON.stringify(transformedData.map((item: UrlEntry) => ({
+        id: item.id,
+        url: item.url,
+        summary: item.summary
+      })), null, 2));
+      
+      setUrls(transformedData);
+      setFilteredUrls(transformedData);
       setError(null);
     } catch (error) {
       console.error('Error fetching URLs:', error);
@@ -53,10 +81,12 @@ export default function UrlList() {
     }
   };
   
-  // Fetch URLs on component mount
+  // Fetch URLs when user is authenticated
   useEffect(() => {
-    fetchUrls();
-  }, []);
+    if (user) {
+      fetchUrls();
+    }
+  }, [user]);
   
   // Handle filter change
   const handleFilterChange = (selectedTags: string[]) => {
@@ -100,6 +130,28 @@ export default function UrlList() {
   const handleUrlAdded = () => {
     fetchUrls();
   };
+  
+  // Show loading state while authentication is being checked
+  if (authLoading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+      </div>
+    );
+  }
+  
+  // Show login prompt if user is not authenticated
+  if (!user) {
+    return (
+      <div className="bg-white shadow overflow-hidden sm:rounded-lg p-6 text-center">
+        <h2 className="text-xl font-semibold mb-4">Authentication Required</h2>
+        <p className="text-gray-500 mb-4">Please log in to view and manage your saved URLs.</p>
+        <Link href="/auth/login" className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+          Go to Login
+        </Link>
+      </div>
+    );
+  }
   
   if (loading && urls.length === 0) {
     return (
@@ -166,7 +218,7 @@ export default function UrlList() {
                 pageTitle={url.pageTitle}
                 dateAccessed={url.dateAccessed}
                 summary={url.summary}
-                processingStatus={url.processingStatus}
+                processingStatus={url.processingStatus || 'completed'}
                 tags={url.tags}
               />
             ))}

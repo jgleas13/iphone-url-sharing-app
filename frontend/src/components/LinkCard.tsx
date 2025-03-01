@@ -22,11 +22,11 @@ export default function LinkCard({
   const [expanded, setExpanded] = useState(false);
   
   // Format the date for display
-  const formattedDate = new Date(dateAccessed).toLocaleDateString('en-US', {
+  const formattedDate = dateAccessed ? new Date(dateAccessed).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric'
-  });
+  }) : 'Unknown date';
   
   return (
     <div className="bg-white overflow-hidden shadow rounded-lg divide-y divide-gray-200">
@@ -67,7 +67,7 @@ export default function LinkCard({
             <div className="sm:col-span-2">
               <dt className="text-sm font-medium text-gray-500">Summary</dt>
               <dd className="mt-1 text-sm text-gray-900">
-                {summary || 'Summary unavailable'}
+                {summary && summary.trim() !== '' ? summary : 'No summary available'}
               </dd>
             </div>
             
