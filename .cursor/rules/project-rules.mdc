@@ -1,0 +1,118 @@
+---
+description: Apply these rules when creating the project
+globs:
+alwaysApply: true
+---
+## Project Overview
+
+*   **Type:** cursor_project_rules
+*   **Description:** I want to build a product that allows me to be on my iPhone browsing and be able to share a URL and then I want the URL to be saved to a website that I can actually go back in and see in the future. The app receives a URL from an iOS Shortcut, summarizes its content using an AI tool, and stores metadata including the page title, date accessed, and processing status for easy filtering and review.
+*   **Primary Goal:** Seamlessly capture shared URLs from iOS, automatically generate concise AI summaries via Grok, and provide a modern, user-friendly dashboard with advanced filtering, sorting, and tagging for easy retrieval and review of saved content.
+
+## Project Structure
+
+### Framework-Specific Routing
+
+*   **Directory Rules:**
+
+    *   **Next.js 14 (App Router):** Enforce use of the `app/` directory with nested route folders, following the convention `app/[route]/page.tsx` for each route. For instance, the main dashboard uses `app/dashboard/page.tsx` and the authentication flow follows `app/auth/login/page.tsx` for Google sign-in via Supabase.
+    *   Example 1: "Next.js 14 (App Router)" → `app/[route]/page.tsx` conventions
+    *   Example 2: "Next.js (Pages Router)" → `pages/[route].tsx` pattern (not applicable in this project)
+    *   Example 3: "React Router 6" → `src/routes/` with `createBrowserRouter` (if needed in future adaptations)
+
+### Core Directories
+
+*   **Versioned Structure:**
+
+    *   **app/api:** Next.js 14 API routes with Route Handlers to process URL submissions from the iOS Shortcut, extract metadata, and interface with Grok for summarization.
+    *   **app/dashboard:** Contains the main dashboard and components for displaying saved URLs.
+    *   **app/auth:** Dedicated directory for authentication components using Supabase and Google sign-in.
+
+### Key Files
+
+*   **Stack-Versioned Patterns:**
+
+    *   **app/api/receive/route.ts:** Next.js 14 API route handling URL submissions and metadata extraction.
+    *   **app/dashboard/page.tsx:** The primary page displaying clickable URLs in a list, with expandable detailed views.
+    *   **app/auth/login/page.tsx:** Handles Google sign-in via Supabase, ensuring a secure and streamlined user authentication flow.
+
+## Tech Stack Rules
+
+*   **Version Enforcement:**
+
+    *   **next@14:** Enforce the App Router pattern. Use the `app/` directory exclusively; avoid mixing with `pages/` structure.
+    *   **node.js:** Use current LTS version with proper middleware handling for API requests.
+    *   **postgresql & supabase:** Utilize secure database interactions, ensuring proper indexing and authentication for data storage.
+    *   **grok:** Integrate the Grok AI service with clear constraints; must generate concise summaries (a few clear sentences) and maintain tagging for content categorization.
+    *   **ios_shortcut:** Ensure that the iOS Shortcut efficiently sends URLs and necessary metadata via API calls.
+    *   **vercel:** Deploy on Vercel for an integrated hosting experience that aligns with efficient credential management.
+    *   **cursor:** Use Cursor as the advanced IDE to facilitate real-time suggestions and context-aware development.
+
+## PRD Compliance
+
+*   **Non-Negotiable:**
+
+    *   "Failed summarization processes should still save the URL along with its metadata, marking the summary as unavailable." - This constraint ensures that even if Grok fails to generate a summary, the URL, page title, date accessed, and tags remain stored and accessible.
+
+## App Flow Integration
+
+*   **Stack-Aligned Flow:**
+
+    *   Example: "Next.js 14 Auth Flow → `app/auth/login/page.tsx` uses server actions for Google authentication via Supabase, ensuring smooth transition from the landing page to the dashboard."
+
+## Best Practices
+
+*   **next.js**
+
+    *   Use server components and the App Router for optimal performance and clarity in component organization.
+    *   Keep components modular and maintain separation of concerns between UI and data fetching.
+    *   Leverage built-in routing features without mixing incompatible patterns (i.e., do not use both `app/` and `pages/` directories).
+
+*   **node.js**
+
+    *   Utilize middleware for centralized error handling and logging.
+    *   Follow asynchronous practices and proper promise handling for API routes.
+    *   Ensure that API endpoints are secure and validate incoming data properly.
+
+*   **postgresql**
+
+    *   Design the database schema with appropriate indexes to speed up queries.
+    *   Use parameterized queries or ORM/Query Builders to prevent SQL injection.
+    *   Regularly back up data and manage connections efficiently.
+
+*   **supabase**
+
+    *   Rely on Supabase for streamlined authentication and secure database management.
+    *   Implement role-based access control to protect sensitive endpoints.
+    *   Keep integration with Next.js API routes clear and structured.
+
+*   **grok**
+
+    *   Ensure clear prompt engineering so that summaries are concise (a few sentences) and tagged appropriately.
+    *   Manage API rate limits and handle failures gracefully by marking summaries as unavailable.
+    *   Monitor performance and error rates to maintain consistent summarization results.
+
+*   **ios_shortcut**
+
+    *   Design the sharing workflow to be as seamless as possible, reducing the friction between URL sharing from iOS and backend processing.
+    *   Test the Shortcut extensively to ensure accurate data transmission (URL, page title, date accessed).
+    *   Provide clear error feedback on the iOS side if data isn't transmitted successfully.
+
+*   **vercel**
+
+    *   Leverage Vercel’s serverless functions for API endpoints to optimize response times.
+    *   Use environment variables securely for sensitive configuration details.
+    *   Monitor deployment health and ensure builds are optimized for production.
+
+*   **cursor**
+
+    *   Utilize real-time AI-powered suggestions to enforce code quality and standards.
+    *   Follow best practices in code reviews and commit message clarity.
+    *   Integrate Cursor with existing CI/CD pipelines to maintain continuous improvement.
+
+## Rules
+
+*   Derive folder/file patterns directly from the tech stack versions specified (e.g., Next.js 14 App Router enforces `app/` directory usage).
+*   If Next.js 14 App Router: Enforce `app/` directory with nested route folders exclusively; do not mix with `pages/` structure.
+*   For any alternate frameworks (like React Router or SvelteKit), mirror the logic of consistent versioned folder/file patterns.
+*   Never mix version patterns (e.g., no `pages/` in projects using the App Router).
