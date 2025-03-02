@@ -1,4 +1,12 @@
-const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+// Determine if we're running in a development environment
+const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+
+// Use local backend in development, production backend in production
+const API_URL = isDevelopment 
+  ? 'http://localhost:3001' 
+  : (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://backend-9gedbrpwu-johngleason-outlookcoms-projects.vercel.app');
+
+console.log(`[API] Using backend URL: ${API_URL}`);
 
 interface UrlEntry {
   id?: string;

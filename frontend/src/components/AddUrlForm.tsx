@@ -66,7 +66,7 @@ export default function AddUrlForm({ onUrlAdded }: AddUrlFormProps) {
         <div className="md:col-span-1">
           <h3 className="text-lg font-medium leading-6 text-gray-900">Add URL Manually</h3>
           <p className="mt-1 text-sm text-gray-500">
-            Add a URL manually to save and summarize it.
+            Add a URL manually to save and summarize it. AI will automatically generate a title, summary, and tags if not provided.
           </p>
         </div>
         <div className="mt-5 md:mt-0 md:col-span-2">
@@ -99,8 +99,11 @@ export default function AddUrlForm({ onUrlAdded }: AddUrlFormProps) {
                   value={pageTitle}
                   onChange={(e) => setPageTitle(e.target.value)}
                   className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                  placeholder="Example Page"
+                  placeholder="Leave blank for AI-generated title"
                 />
+                <p className="mt-1 text-xs text-gray-500">
+                  If left blank, an AI-generated title will be created based on the URL content.
+                </p>
               </div>
               
               <div className="col-span-6">

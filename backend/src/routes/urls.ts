@@ -33,6 +33,7 @@ router.post('/', function(req, res) {
       // Process the URL with OpenAI for summarization
       let summary = '';
       let detectedTags: string[] = [];
+      let generatedTitle = '';
       let processingStatus = 'completed';
 
       try {
@@ -40,7 +41,9 @@ router.post('/', function(req, res) {
         const summarizationResult = await summarizeContent(url);
         summary = summarizationResult.summary;
         detectedTags = summarizationResult.tags;
+        generatedTitle = summarizationResult.generatedTitle || '';
         console.log(`[URLs Route] Summarization successful. Summary length: ${summary.length}`);
+        console.log(`[URLs Route] Generated title: ${generatedTitle}`);
         console.log(`[URLs Route] Detected tags: ${detectedTags.join(', ')}`);
       } catch (error) {
         console.error('[URLs Route] Summarization failed:', error);
@@ -53,11 +56,15 @@ router.post('/', function(req, res) {
       const allTags = [...new Set([...tags, ...detectedTags])];
       console.log(`[URLs Route] Combined tags: ${allTags.join(', ')}`);
 
+      // Use the generated title if no title was provided
+      const finalTitle = pageTitle || generatedTitle || url;
+      console.log(`[URLs Route] Final title: ${finalTitle}`);
+
       // Save the URL data to the database
       console.log('[URLs Route] Saving URL to database');
       const savedUrl = await saveUrl({
         url,
-        pageTitle: pageTitle || url,
+        pageTitle: finalTitle,
         dateAccessed: dateAccessed || new Date().toISOString(),
         summary,
         processingStatus,
@@ -67,6 +74,7 @@ router.post('/', function(req, res) {
       console.log('[URLs Route] URL saved successfully');
       console.log('[URLs Route] Response data:', JSON.stringify({
         url: savedUrl.url,
+        pageTitle: savedUrl.pageTitle,
         summary: savedUrl.summary,
         tags: savedUrl.tags
       }, null, 2));

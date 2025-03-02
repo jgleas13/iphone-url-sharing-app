@@ -1,6 +1,6 @@
 ---
 description: Apply these rules when creating the project
-globs:
+globs: 
 alwaysApply: true
 ---
 ## Project Overview
@@ -116,3 +116,4 @@ alwaysApply: true
 *   If Next.js 14 App Router: Enforce `app/` directory with nested route folders exclusively; do not mix with `pages/` structure.
 *   For any alternate frameworks (like React Router or SvelteKit), mirror the logic of consistent versioned folder/file patterns.
 *   Never mix version patterns (e.g., no `pages/` in projects using the App Router).
+* Always restart both servers together using start-dev-environment.sh 

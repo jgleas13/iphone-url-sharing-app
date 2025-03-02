@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
             keys: typeof value === 'object' && value !== null ? Object.keys(value) : []
           };
           return acc;
-        }, {} as Record<string, any>) : {}
+        }, {} as Record<string, { type: string; isArray: boolean; keys: string[] }>) : {}
     });
   } catch (error) {
     console.error('[Debug API] Error:', error);

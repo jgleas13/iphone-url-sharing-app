@@ -23,6 +23,7 @@ const logToFile = (message: string) => {
 interface SummarizationResult {
   summary: string;
   tags: string[];
+  generatedTitle?: string;
 }
 
 /**
@@ -34,14 +35,6 @@ export async function summarizeContent(url: string): Promise<SummarizationResult
   try {
     console.log(`[Summarization] Starting summarization for URL: ${url}`);
     logToFile(`Starting summarization for URL: ${url}`);
-    
-    // For a real implementation, you would:
-    // 1. Fetch the content of the webpage
-    // 2. Send the content to OpenAI API for summarization
-    // 3. Process the response to extract the summary and tags
-    
-    // This is a simplified implementation
-    // In a production environment, you would fetch the actual webpage content first
     
     // Force reload the API key from environment variables
     const openaiApiKey = process.env.OPENAI_API_KEY;
@@ -55,7 +48,8 @@ export async function summarizeContent(url: string): Promise<SummarizationResult
     if (!openaiApiKey) {
       console.error('[Summarization] ERROR: OpenAI API key is not configured in environment variables');
       logToFile('ERROR: OpenAI API key is not configured in environment variables');
-      throw new Error('OpenAI API key is not configured');
+      // Instead of throwing, return a fallback response
+      return getFallbackSummary(url);
     }
     
     // Log first few characters of the API key for debugging (safely)
@@ -74,9 +68,10 @@ export async function summarizeContent(url: string): Promise<SummarizationResult
     
     // For demonstration, we'll use a simple prompt
     // In a real implementation, you would include the actual webpage content
-    const prompt = `Please provide a concise summary (2-3 sentences) of the webpage at ${url} and suggest 2-4 relevant tags for categorizing this content.
+    const prompt = `Please provide a concise summary (2-3 sentences) of the webpage at ${url}, suggest a clear and descriptive title for this content, and suggest 2-4 relevant tags for categorizing this content.
     
     Format your response as:
+    Title: [your generated title here]
     Summary: [your summary here]
     Tags: [comma-separated list of tags]`;
     
@@ -161,16 +156,20 @@ export async function summarizeContent(url: string): Promise<SummarizationResult
       logToFile(`OpenAI API response data: ${JSON.stringify(response.data, null, 2)}`);
     }
     
-    // Parse the response to extract summary and tags
+    // Parse the response to extract title, summary and tags
     const aiResponse = response.data.choices[0].message.content;
     console.log(`[Summarization] AI response content: ${aiResponse}`);
     logToFile(`AI response content: ${aiResponse}`);
     
-    // Extract summary and tags from the response
-    // Updated regex to handle multiline summaries
+    // Extract title, summary and tags from the response
+    const titleMatch = aiResponse.match(/Title:\s*(.*?)(?=\s*\n\s*Summary:|$)/i);
     const summaryMatch = aiResponse.match(/Summary:\s*([\s\S]*?)(?=\s*\n\s*Tags:|$)/i);
     const tagsMatch = aiResponse.match(/Tags:\s*(.*?)$/i);
     
+    console.log(`[Summarization] Title match: ${titleMatch ? 'Found' : 'Not found'}`);
+    if (titleMatch) {
+      console.log(`[Summarization] Title match groups:`, JSON.stringify(titleMatch));
+    }
     console.log(`[Summarization] Summary match: ${summaryMatch ? 'Found' : 'Not found'}`);
     if (summaryMatch) {
       console.log(`[Summarization] Summary match groups:`, JSON.stringify(summaryMatch));
@@ -180,83 +179,55 @@ export async function summarizeContent(url: string): Promise<SummarizationResult
       console.log(`[Summarization] Tags match groups:`, JSON.stringify(tagsMatch));
     }
     
+    const generatedTitle = titleMatch ? titleMatch[1].trim() : '';
     const summary = summaryMatch ? summaryMatch[1].trim() : 'No summary available';
     const tagsString = tagsMatch ? tagsMatch[1].trim() : '';
     const tags = tagsString.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag);
     
+    console.log(`[Summarization] Extracted title: ${generatedTitle}`);
     console.log(`[Summarization] Extracted summary: ${summary}`);
     console.log(`[Summarization] Extracted tags: ${tags.join(', ')}`);
     
-    return { summary, tags };
+    return { summary, tags, generatedTitle };
   } catch (error) {
     console.error('[Summarization] Error in summarization service:', error);
     logToFile(`Error in summarization service: ${error}`);
     
-    if (axios.isAxiosError(error)) {
-      console.error('[Summarization] Axios error details:', {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data
-      });
-      logToFile(`Axios error details: ${JSON.stringify({
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data
-      }, null, 2)}`);
-      
-      // Debug: Log the request that caused the error
-      if (error.request) {
-        console.error('[Summarization] Request that caused error:');
-        console.error('URL:', error.config?.url);
-        console.error('Method:', error.config?.method);
-        console.error('Headers:', JSON.stringify({
-          ...error.config?.headers,
-          Authorization: error.config?.headers?.Authorization ? 'Bearer [REDACTED]' : undefined
-        }));
-        
-        logToFile('Request that caused error:');
-        logToFile(`URL: ${error.config?.url}`);
-        logToFile(`Method: ${error.config?.method}`);
-        logToFile(`Headers: ${JSON.stringify({
-          ...error.config?.headers,
-          Authorization: error.config?.headers?.Authorization ? 'Bearer [REDACTED]' : undefined
-        })}`);
-        
-        // Check if the Authorization header contains the literal string "your_openai_api_key"
-        const authHeader = error.config?.headers?.Authorization as string;
-        if (authHeader && authHeader.includes('your_openai_api_key')) {
-          console.error('[Summarization] CRITICAL ERROR: Authorization header contains "your_openai_api_key" instead of the actual API key');
-          logToFile('CRITICAL ERROR: Authorization header contains "your_openai_api_key" instead of the actual API key');
-          
-          // Log the actual header for debugging
-          logToFile(`Actual Authorization header: ${authHeader}`);
-        }
-      }
-    }
-    
-    // Fallback to mock response if API call fails
-    const domain = new URL(url).hostname;
-    
-    let summary = '';
-    let tags: string[] = [];
-    
-    if (domain.includes('github')) {
-      summary = 'This is a GitHub repository page containing code and documentation.';
-      tags = ['technology', 'programming', 'github'];
-    } else if (domain.includes('medium')) {
-      summary = 'This is a Medium article discussing various topics.';
-      tags = ['article', 'blog'];
-    } else if (domain.includes('news')) {
-      summary = 'This is a news article covering current events.';
-      tags = ['news', 'current events'];
-    } else {
-      summary = `This is a webpage from ${domain} with various content.`;
-      tags = ['webpage', 'miscellaneous'];
-    }
-    
-    console.log(`[Summarization] Using fallback summary: ${summary}`);
-    console.log(`[Summarization] Using fallback tags: ${tags.join(', ')}`);
-    
-    return { summary, tags };
+    // Return fallback response instead of throwing
+    return getFallbackSummary(url);
   }
+}
+
+// Helper function to generate fallback summary
+function getFallbackSummary(url: string): SummarizationResult {
+  console.log(`[Summarization] Using fallback summary for URL: ${url}`);
+  
+  const domain = new URL(url).hostname;
+  
+  let summary = '';
+  let tags: string[] = [];
+  let generatedTitle = '';
+  
+  if (domain.includes('github')) {
+    generatedTitle = 'GitHub Repository: Code and Documentation';
+    summary = 'This is a GitHub repository page containing code and documentation.';
+    tags = ['technology', 'programming', 'github'];
+  } else if (domain.includes('medium')) {
+    generatedTitle = 'Medium Article on Various Topics';
+    summary = 'This is a Medium article discussing various topics.';
+    tags = ['article', 'blog'];
+  } else if (domain.includes('news')) {
+    generatedTitle = 'News Article on Current Events';
+    summary = 'This is a news article covering current events.';
+    tags = ['news', 'current events'];
+  } else {
+    generatedTitle = `Content from ${domain}`;
+    summary = `This is a webpage from ${domain} with various content.`;
+    tags = ['webpage', 'miscellaneous'];
+  }
+  
+  console.log(`[Summarization] Fallback summary: ${summary}`);
+  console.log(`[Summarization] Fallback tags: ${tags.join(', ')}`);
+  
+  return { summary, tags, generatedTitle };
 } 

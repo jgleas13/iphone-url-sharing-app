@@ -38,7 +38,16 @@ export async function POST(request: NextRequest) {
     
     // Call the backend API for summarization
     console.log('[API] Calling backend for summarization:', url);
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+    
+    // Determine if we're running in a development environment (server-side)
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    
+    // Use local backend in development, production backend in production
+    const backendUrl = isDevelopment 
+      ? 'http://localhost:3001' 
+      : (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://backend-9gedbrpwu-johngleason-outlookcoms-projects.vercel.app');
+    
+    console.log(`[API] Using backend URL: ${backendUrl}`);
     
     try {
       const response = await axios.post(`${backendUrl}/api/v1/urls`, {
@@ -50,9 +59,14 @@ export async function POST(request: NextRequest) {
       
       // Debug: Log the full response structure
       console.log('[API] Backend response structure:', JSON.stringify(response.data, null, 2));
+      console.log('[API] Response data type:', typeof response.data);
+      if (typeof response.data === 'object') {
+        console.log('[API] Response data keys:', Object.keys(response.data));
+      }
       
       // Extract summary from response - handle different possible structures
       let summary = '';
+      let generatedTitle = '';
       if (response.data && typeof response.data === 'object') {
         // Check if summary is directly in response.data
         if ('summary' in response.data && response.data.summary) {
@@ -69,6 +83,27 @@ export async function POST(request: NextRequest) {
           summary = response.data[0].summary;
           console.log('[API] Found summary in first item of response array:', summary);
         }
+
+        // Extract generated title from response
+        if ('pageTitle' in response.data && response.data.pageTitle) {
+          generatedTitle = response.data.pageTitle;
+          console.log('[API] Found generated title in response.pageTitle:', generatedTitle);
+        } else if (response.data.data && 'pageTitle' in response.data.data) {
+          generatedTitle = response.data.data.pageTitle;
+          console.log('[API] Found generated title in response.data.pageTitle:', generatedTitle);
+        } else if (Array.isArray(response.data) && response.data.length > 0 && response.data[0].pageTitle) {
+          generatedTitle = response.data[0].pageTitle;
+          console.log('[API] Found generated title in first item of response array:', generatedTitle);
+        }
+        
+        // The backend returns the data in a structure like { url, pageTitle, summary, tags }
+        // so we need to check if the response has these properties directly
+        if (!generatedTitle && typeof response.data === 'object') {
+          if (response.data.pageTitle && typeof response.data.pageTitle === 'string') {
+            generatedTitle = response.data.pageTitle;
+            console.log('[API] Found title directly in response.data.pageTitle:', generatedTitle);
+          }
+        }
       }
       
       // Ensure summary is a string and not empty
@@ -79,10 +114,15 @@ export async function POST(request: NextRequest) {
       }
       console.log('[API] Final summary to be saved:', summary);
       
+      // Log if we're using a generated title
+      if (!pageTitle && generatedTitle) {
+        console.log('[API] Using AI-generated title:', generatedTitle);
+      }
+      
       // Prepare data for insertion with the summary from backend
       const urlData = {
         url,
-        page_title: pageTitle || '',
+        page_title: pageTitle || generatedTitle || '',
         tags: response.data.tags || tags || [],
         date_accessed: dateAccessed || new Date().toISOString(),
         user_id: session.user.id,
