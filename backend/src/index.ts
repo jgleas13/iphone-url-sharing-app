@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import urlRoutes from './routes/urls';
@@ -10,12 +10,50 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3001;
 
+// Authentication middleware function
+const authMiddleware = (req: Request, res: Response, next: NextFunction): void => {
+  // Skip auth check in development
+  if (process.env.NODE_ENV !== 'production') {
+    return next();
+  }
+
+  console.log('[Auth] Checking authentication');
+  
+  // Get the authorization header
+  const authHeader = req.headers.authorization;
+  
+  // Check if the request is from Vercel
+  const isVercelRequest = req.headers['x-vercel-deployment-url'] || 
+                          req.headers['x-vercel-id'] ||
+                          req.headers['x-forwarded-host']?.toString().includes('vercel.app');
+  
+  // If it's a Vercel request or has a valid auth header, proceed
+  if (isVercelRequest || (authHeader && authHeader.startsWith('Bearer '))) {
+    console.log('[Auth] Authentication successful');
+    return next();
+  }
+  
+  // For the health check endpoint, allow without auth
+  if (req.path === '/health') {
+    return next();
+  }
+  
+  console.log('[Auth] Authentication failed');
+  res.status(401).json({ 
+    error: 'Authentication required',
+    message: 'Please provide valid authentication credentials'
+  });
+};
+
 // Middleware
 app.use(express.json());
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
   credentials: true
 }));
+
+// Apply authentication middleware
+app.use(authMiddleware);
 
 // Routes
 app.use('/api/v1/urls', urlRoutes);
