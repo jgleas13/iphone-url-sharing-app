@@ -1,6 +1,7 @@
 import express from 'express';
 import { summarizeContent } from '../services/summarization';
 import { saveUrl, getUrls } from '../services/database';
+import { validateApiKey } from '../models/apiKey';
 
 const router = express.Router();
 
@@ -12,13 +13,56 @@ interface UrlRequest {
   tags?: string[];
 }
 
+// Middleware to validate API key
+const validateApiKeyMiddleware = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  try {
+    // Get the API key from the Authorization header
+    const apiKey = req.headers.authorization?.replace('Bearer ', '') || '';
+    
+    if (!apiKey) {
+      console.log('[Auth Middleware] No API key provided');
+      res.status(401).json({ error: 'API key required' });
+      return;
+    }
+    
+    // For development environment, accept any API key with the correct prefix
+    if (process.env.NODE_ENV === 'development' && apiKey.startsWith('ipus_')) {
+      console.log('[Auth Middleware] Development mode - accepting test API key');
+      (req as any).userId = 'test_user_123';
+      next();
+      return;
+    }
+    
+    // Validate the API key in production
+    const userId = await validateApiKey(apiKey);
+    
+    if (!userId) {
+      console.log('[Auth Middleware] Invalid API key');
+      res.status(401).json({ error: 'Invalid API key' });
+      return;
+    }
+    
+    // Store the user ID in the request for later use
+    (req as any).userId = userId;
+    console.log(`[Auth Middleware] Valid API key for user: ${userId}`);
+    next();
+  } catch (error) {
+    console.error('[Auth Middleware] Error validating API key:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 // POST endpoint to receive and process URLs
 router.post('/', function(req, res) {
   const handlePost = async () => {
     try {
       console.log('[URLs Route] Processing POST request');
       const { url, pageTitle, dateAccessed, tags = [] } = req.body as UrlRequest;
-
+      
+      // Get the user ID from the request (set by the auth middleware)
+      const userId = (req as any).userId || 'test_user_123';
+      console.log(`[URLs Route] Request from user: ${userId}`);
+      
       // Validate required fields
       if (!url) {
         console.log('[URLs Route] Error: URL is required');
@@ -29,6 +73,7 @@ router.post('/', function(req, res) {
       console.log(`[URLs Route] Page title: ${pageTitle || 'Not provided'}`);
       console.log(`[URLs Route] Date accessed: ${dateAccessed || 'Not provided'}`);
       console.log(`[URLs Route] Tags: ${tags.length > 0 ? tags.join(', ') : 'None provided'}`);
+      console.log(`[URLs Route] User ID: ${userId}`);
 
       // Process the URL with OpenAI for summarization
       let summary = '';
@@ -69,7 +114,7 @@ router.post('/', function(req, res) {
         summary,
         processingStatus,
         tags: allTags
-      });
+      }, userId);
 
       console.log('[URLs Route] URL saved successfully');
       console.log('[URLs Route] Response data:', JSON.stringify({
@@ -93,8 +138,12 @@ router.get('/', function(req, res) {
   const handleGet = async () => {
     try {
       console.log('[URLs Route] Processing GET request');
-      const urls = await getUrls();
-      console.log(`[URLs Route] Retrieved ${urls.length} URLs`);
+      // Get the user ID from the request (set by the auth middleware)
+      const userId = (req as any).userId || 'test_user_123';
+      console.log(`[URLs Route] Request from user: ${userId}`);
+      
+      const urls = await getUrls(userId);
+      console.log(`[URLs Route] Retrieved ${urls.length} URLs for user ${userId}`);
       res.status(200).json(urls);
     } catch (error) {
       console.error('[URLs Route] Error retrieving URLs:', error);

@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import urlRoutes from './routes/urls';
+import apiKeyRoutes from './routes/apiKeys';
 
 // Load environment variables
 dotenv.config();
@@ -13,7 +14,16 @@ const port = process.env.PORT || 3001;
 // Authentication middleware function
 const authMiddleware = (req: Request, res: Response, next: NextFunction): void => {
   // Skip auth check in development
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[Auth] Development mode - skipping authentication');
+    
+    // For API endpoints that need user ID, set a test user ID
+    const path = req.path;
+    if (path.includes('/api/v1/urls')) {
+      console.log('[Auth] Setting test user ID for development mode');
+      (req as any).userId = 'test_user_123';
+    }
+    
     return next();
   }
 
@@ -57,6 +67,7 @@ app.use(authMiddleware);
 
 // Routes
 app.use('/api/v1/urls', urlRoutes);
+app.use('/api/v1/api-keys', apiKeyRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

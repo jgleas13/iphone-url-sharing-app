@@ -12,18 +12,17 @@ interface UrlEntry {
   summary: string;
   processingStatus: string;
   tags: string[];
+  user_id?: string; // Add user_id for association with a specific user
 }
 
 /**
  * Save a URL entry to the database
  * @param urlData The URL data to save
+ * @param userId The ID of the user who owns this URL
  * @returns A promise that resolves to the saved URL entry
  */
-export async function saveUrl(urlData: UrlEntry): Promise<UrlEntry> {
+export async function saveUrl(urlData: UrlEntry, userId: string): Promise<UrlEntry> {
   try {
-    // In a real implementation, this would insert data into Supabase
-    // For now, we'll simulate a response
-    
     console.log('[Database] Saving URL to database');
     console.log(`[Database] URL: ${urlData.url}`);
     console.log(`[Database] Page title: ${urlData.pageTitle}`);
@@ -31,6 +30,13 @@ export async function saveUrl(urlData: UrlEntry): Promise<UrlEntry> {
     console.log(`[Database] Summary: ${urlData.summary.substring(0, 50)}${urlData.summary.length > 50 ? '...' : ''}`);
     console.log(`[Database] Processing status: ${urlData.processingStatus}`);
     console.log(`[Database] Tags: ${urlData.tags.join(', ')}`);
+    console.log(`[Database] User ID: ${userId}`);
+    
+    // Add the user_id to the URL data
+    const urlWithUser = {
+      ...urlData,
+      user_id: userId
+    };
     
     // Simulate database operation delay
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -38,7 +44,7 @@ export async function saveUrl(urlData: UrlEntry): Promise<UrlEntry> {
     // Mock response with generated ID
     const savedUrl: UrlEntry = {
       id: `url_${Date.now()}`,
-      ...urlData
+      ...urlWithUser
     };
     
     console.log(`[Database] URL saved successfully with ID: ${savedUrl.id}`);
@@ -48,7 +54,7 @@ export async function saveUrl(urlData: UrlEntry): Promise<UrlEntry> {
     /*
     const { data, error } = await supabase
       .from('urls')
-      .insert(urlData)
+      .insert(urlWithUser)
       .select()
       .single();
       
@@ -62,15 +68,16 @@ export async function saveUrl(urlData: UrlEntry): Promise<UrlEntry> {
 }
 
 /**
- * Retrieve all saved URL entries from the database
+ * Retrieve all saved URL entries for a specific user
+ * @param userId The ID of the user whose URLs to retrieve
  * @returns A promise that resolves to an array of URL entries
  */
-export async function getUrls(): Promise<UrlEntry[]> {
+export async function getUrls(userId?: string): Promise<UrlEntry[]> {
   try {
-    // In a real implementation, this would query data from Supabase
-    // For now, we'll simulate a response
-    
     console.log('[Database] Retrieving URLs from database');
+    if (userId) {
+      console.log(`[Database] Filtering by user ID: ${userId}`);
+    }
     
     // Simulate database operation delay
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -84,7 +91,8 @@ export async function getUrls(): Promise<UrlEntry[]> {
         dateAccessed: new Date().toISOString(),
         summary: 'This is a GitHub repository page containing code and documentation.',
         processingStatus: 'completed',
-        tags: ['technology', 'programming', 'github']
+        tags: ['technology', 'programming', 'github'],
+        user_id: userId || 'default_user'
       },
       {
         id: 'url_2',
@@ -93,19 +101,29 @@ export async function getUrls(): Promise<UrlEntry[]> {
         dateAccessed: new Date().toISOString(),
         summary: 'This is a Medium article discussing various topics.',
         processingStatus: 'completed',
-        tags: ['article', 'blog']
+        tags: ['article', 'blog'],
+        user_id: userId || 'default_user'
       }
     ];
     
-    console.log(`[Database] Retrieved ${urls.length} URLs`);
-    return urls;
+    // If userId is provided, filter the results
+    const filteredUrls = userId ? urls.filter(url => url.user_id === userId) : urls;
+    
+    console.log(`[Database] Retrieved ${filteredUrls.length} URLs`);
+    return filteredUrls;
     
     // Actual Supabase implementation would be:
     /*
-    const { data, error } = await supabase
+    let query = supabase
       .from('urls')
-      .select('*')
-      .order('dateAccessed', { ascending: false });
+      .select('*');
+      
+    // If userId is provided, filter by it
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+    
+    const { data, error } = await query.order('dateAccessed', { ascending: false });
       
     if (error) throw error;
     return data || [];

@@ -17,6 +17,42 @@ export default function Guide() {
             </p>
           </div>
           
+          <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-8">
+            <div className="px-4 py-5 sm:px-6">
+              <h3 className="text-lg leading-6 font-medium text-gray-900">
+                Getting Your Personal API Key
+              </h3>
+              <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                Before setting up the iOS Shortcut, you'll need to generate a personal API key.
+              </p>
+            </div>
+            <div className="border-t border-gray-200">
+              <dl>
+                <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                  <dt className="text-sm font-medium text-gray-500">Step 1</dt>
+                  <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                    <p>Go to your <a href="/settings" className="text-blue-600 hover:text-blue-800">Account Settings</a> page.</p>
+                  </dd>
+                </div>
+                <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                  <dt className="text-sm font-medium text-gray-500">Step 2</dt>
+                  <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                    <p>Click the "Generate New API Key" button.</p>
+                  </dd>
+                </div>
+                <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                  <dt className="text-sm font-medium text-gray-500">Step 3</dt>
+                  <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                    <p>Copy your API key. This is the only time you'll see the full key, so make sure to save it securely.</p>
+                    <p className="mt-2 text-xs text-red-500">
+                      Important: Your API key is like a password. Never share it with others.
+                    </p>
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+          
           <div className="bg-white shadow overflow-hidden sm:rounded-lg">
             <div className="px-4 py-5 sm:px-6">
               <h3 className="text-lg leading-6 font-medium text-gray-900">
@@ -63,11 +99,12 @@ export default function Guide() {
                   <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                     <p>Configure the "Get Contents of URL" action with the following settings:</p>
                     <ul className="mt-2 list-disc pl-5 space-y-1 text-sm">
-                      <li>URL: Your API endpoint (e.g., <code className="bg-gray-100 px-1 py-0.5 rounded">https://your-app.vercel.app/api/urls</code>)</li>
+                      <li>URL: <code className="bg-gray-100 px-1 py-0.5 rounded">https://backend-johngleason-outlookcoms-projects.vercel.app/api/v1/urls</code></li>
                       <li>Method: POST</li>
                       <li>Headers:
                         <ul className="mt-1 list-disc pl-5 space-y-1">
                           <li>Content-Type: application/json</li>
+                          <li>Authorization: Bearer YOUR_API_KEY_HERE</li>
                         </ul>
                       </li>
                       <li>Request Body: JSON</li>
@@ -81,6 +118,9 @@ export default function Guide() {
 }`}
                       </pre>
                     </div>
+                    <p className="mt-2 text-xs text-blue-500">
+                      Make sure to replace "YOUR_API_KEY_HERE" with the actual API key you generated.
+                    </p>
                   </dd>
                 </div>
                 <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">

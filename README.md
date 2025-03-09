@@ -87,6 +87,16 @@ A modern web application that allows you to easily save and summarize URLs direc
 
 ## Setting Up the iOS Shortcut
 
+### Getting Your Personal API Key
+
+1. **Sign in to your account**
+   - Go to the dashboard and make sure you're signed in
+
+2. **Generate an API key**
+   - Navigate to Account Settings
+   - Click the "Generate New API Key" button
+   - Copy your API key (you'll only see it once)
+
 ### Detailed Setup Guide
 
 1. **Open the Shortcuts app** on your iPhone
@@ -104,10 +114,11 @@ A modern web application that allows you to easily save and summarize URLs direc
    - Configure it with the following settings:
 
 5. **Configure the action with these settings:**
-   - URL: Your API endpoint (e.g., `https://your-app.vercel.app/api/urls`)
+   - URL: `https://backend-johngleason-outlookcoms-projects.vercel.app/api/v1/urls`
    - Method: POST
    - Headers:
      - Content-Type: application/json
+     - Authorization: Bearer YOUR_API_KEY_HERE
    - Request Body: JSON
      ```json
      {
@@ -116,6 +127,7 @@ A modern web application that allows you to easily save and summarize URLs direc
        "dateAccessed": "Current Date"
      }
      ```
+   - Replace `YOUR_API_KEY_HERE` with the API key you generated in the previous steps
 
 6. **Add a "Show Result" action**
    - This will display the response from the API

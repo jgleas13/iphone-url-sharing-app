@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
+import { getBackendUrl } from '@/lib/config';
+
+// Add dynamic configuration to prevent static rendering
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,7 +14,7 @@ export async function GET(request: NextRequest) {
     
     // Call the backend API directly
     console.log('[Direct Test API] Calling backend for URL:', url);
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+    const backendUrl = getBackendUrl();
     
     const response = await axios.post(`${backendUrl}/api/v1/urls`, {
       url,

@@ -1431,3 +1431,74 @@ Tags: space exploration, lunar landing, private spaceflight, Firefly Aerospace
 Summary: In a recent high-stakes meeting at the Oval Office, Speaker of the House Mike Johnson urged Ukrainian President Volodymyr Zelenskyy to resign amid ongoing political tensions and policy disagreements. The confrontation underscores deepening rifts over U.S. support for Ukraine, as Johnson expressed concerns about the direction and leadership of Zelenskyy's administration.
 
 Tags: U.S. politics, Ukraine, international relations, diplomatic tensions
+2025-03-09T00:05:15.671Z - Starting summarization for URL: https://example.com
+2025-03-09T00:05:15.673Z - Using OpenAI model: gpt-4-turbo
+2025-03-09T00:05:15.673Z - API Key available: true
+2025-03-09T00:05:15.673Z - API Key prefix: sk-proj-ZY... (total length: 164 chars)
+2025-03-09T00:05:15.673Z - Sending request to OpenAI API with prompt: Please provide a concise summary (2-3 sentences) of the webpage at https://example.com, suggest a cl...
+2025-03-09T00:05:15.674Z - Request data: {
+  "model": "gpt-4-turbo",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful assistant that summarizes webpages and generates relevant tags."
+    },
+    {
+      "role": "user",
+      "content": "Please provide a concise summary (2-3 sentences) of the webpage at https://example.com, suggest a clear and descriptive title for this content, and suggest 2-4 relevant tags for categorizing this content.\n    \n    Format your response as:\n    Title: [your generated title here]\n    Summary: [your summary here]\n    Tags: [comma-separated list of tags]"
+    }
+  ],
+  "temperature": 0.7,
+  "max_tokens": 300
+}
+2025-03-09T00:05:15.674Z - Request headers (Authorization value redacted):
+2025-03-09T00:05:15.674Z - {
+  "Content-Type": "application/json",
+  "Authorization": "Bearer [REDACTED]"
+}
+2025-03-09T00:05:15.674Z - Authorization header starts with: Bearer sk-proj-...
+2025-03-09T00:05:15.674Z - Sending request to OpenAI API...
+2025-03-09T00:05:15.674Z - Raw request: POST https://api.openai.com/v1/chat/completions
+2025-03-09T00:05:15.674Z - Raw headers: {"Content-Type":"application/json","Authorization":"Bearer [REDACTED]"}
+2025-03-09T00:05:15.675Z - Raw body: {"model":"gpt-4-turbo","messages":[{"role":"system","content":"You are a helpful assistant that summarizes webpages and generates relevant tags."},{"role":"user","content":"Please provide a concise summary (2-3 sentences) of the webpage at https://example.com, suggest a clear and descriptive title for this content, and suggest 2-4 relevant tags for categorizing this content.\n    \n    Format your response as:\n    Title: [your generated title here]\n    Summary: [your summary here]\n    Tags: [comma-separated list of tags]"}],"temperature":0.7,"max_tokens":300}
+2025-03-09T00:05:20.429Z - OpenAI API response status: 200
+2025-03-09T00:05:20.430Z - OpenAI API response data: {
+  "id": "chatcmpl-B8ySM6Vg5is8VLTJucJmvPIO7IJ2S",
+  "object": "chat.completion",
+  "created": 1741478718,
+  "model": "gpt-4-turbo-2024-04-09",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "Title: Example Domain Information\n\nSummary: The webpage at https://example.com is primarily a placeholder used for illustrative purposes in documentation and online tutorials. It displays a simple message explaining its purpose and informing visitors that they may use the domain in illustrative examples without prior coordination or asking for permission.\n\nTags: example domain, web development, documentation, educational resource",
+        "refusal": null
+      },
+      "logprobs": null,
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 103,
+    "completion_tokens": 72,
+    "total_tokens": 175,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "audio_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+    }
+  },
+  "service_tier": "default",
+  "system_fingerprint": "fp_7c63087da1"
+}
+2025-03-09T00:05:20.430Z - AI response content: Title: Example Domain Information
+
+Summary: The webpage at https://example.com is primarily a placeholder used for illustrative purposes in documentation and online tutorials. It displays a simple message explaining its purpose and informing visitors that they may use the domain in illustrative examples without prior coordination or asking for permission.
+
+Tags: example domain, web development, documentation, educational resource

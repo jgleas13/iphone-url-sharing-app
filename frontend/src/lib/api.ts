@@ -1,10 +1,8 @@
-// Determine if we're running in a development environment
-const isDevelopment = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+// Import the configuration
+import { getBackendUrl, isDevelopment } from './config';
 
-// Use local backend in development, production backend in production
-const API_URL = isDevelopment 
-  ? 'http://localhost:3001' 
-  : (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://backend-9gedbrpwu-johngleason-outlookcoms-projects.vercel.app');
+// Use the dynamic configuration to get the backend URL
+const API_URL = getBackendUrl();
 
 console.log(`[API] Using backend URL: ${API_URL}`);
 

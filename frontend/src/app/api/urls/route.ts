@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import axios from 'axios';
+import { getBackendUrl } from '@/lib/config';
+
+// Add dynamic configuration to prevent static rendering
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,16 +40,8 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Call the backend API for summarization
-    console.log('[API] Calling backend for summarization:', url);
-    
-    // Determine if we're running in a development environment (server-side)
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    
-    // Use local backend in development, production backend in production
-    const backendUrl = isDevelopment 
-      ? 'http://localhost:3001' 
-      : (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://backend-9gedbrpwu-johngleason-outlookcoms-projects.vercel.app');
+    // Use the dynamic configuration to get the backend URL
+    const backendUrl = getBackendUrl();
     
     console.log(`[API] Using backend URL: ${backendUrl}`);
     
