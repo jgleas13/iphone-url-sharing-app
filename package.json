@@ -1,21 +1,46 @@
 {
-  "name": "iphone-url-sharing",
+  "name": "iphone-url-sharing-app",
   "version": "1.0.0",
-  "description": "App to save and summarize URLs shared from iPhone",
+  "description": "iPhone URL Sharing & AI Summarization App",
   "private": true,
   "scripts": {
-    "dev": "./start-dev-environment.sh",
-    "dev:frontend": "cd frontend && npm run dev:3000",
-    "dev:backend": "cd backend && npm run dev",
-    "build": "npm run build:backend && npm run build:frontend",
-    "build:frontend": "cd frontend && npm run build",
-    "build:backend": "cd backend && npm run build",
-    "start": "cd frontend && npm run start"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "migrate": "node migrations/run-migrations.js"
   },
-  "workspaces": [
-    "frontend",
-    "backend"
+  "keywords": [
+    "next.js",
+    "url-sharing",
+    "ai-summarization",
+    "iphone"
   ],
   "author": "",
-  "license": "ISC"
-} 
+  "license": "ISC",
+  "dependencies": {
+    "@headlessui/react": "^2.2.0",
+    "@heroicons/react": "^2.2.0",
+    "@supabase/auth-helpers-nextjs": "^0.8.0",
+    "@supabase/supabase-js": "^2.49.1",
+    "axios": "^1.8.2",
+    "cheerio": "^1.0.0",
+    "dotenv": "^16.4.7",
+    "next": "^14.2.0",
+    "openai": "^4.86.2",
+    "pg": "^8.13.3",
+    "react": "^18",
+    "react-dom": "^18"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.24",
+    "@types/pg": "^8.11.11",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.24",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}

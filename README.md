@@ -1,171 +1,129 @@
-# iPhone URL Sharing & AI Summarization App
+# iPhone URL Sharing App
 
-A modern web application that allows you to easily save and summarize URLs directly from your iPhone. The app uses an iOS Shortcut to share URLs, processes them with AI summarization, and displays them in a clean, organized dashboard.
+A Next.js application that allows you to save and organize URLs shared from your iPhone, with AI-powered summaries.
 
 ## Features
 
-- **iOS URL Sharing**: Share URLs directly from your iPhone using an iOS Shortcut
-- **AI Summarization**: Automatically generate concise summaries of webpage content using OpenAI
-- **Tag Generation**: Automatically detect and assign tags based on content type
-- **Modern Dashboard**: View all saved URLs in a clean, organized interface
-- **Google Authentication**: Secure sign-in using Google via Supabase
-- **Filtering & Sorting**: Easily find saved URLs by filtering and sorting
+- Share URLs directly from your iPhone using iOS Shortcuts
+- Automatic AI-powered summarization of web content
+- Secure authentication with Google via Supabase
+- Dashboard to view, filter, and organize your saved URLs
+- API key management for secure iOS Shortcut integration
 
 ## Tech Stack
 
-### Frontend
-- Next.js 14
-- Tailwind CSS
-- Supabase Auth (Google Sign-In)
+- **Framework**: Next.js 14 (App Router)
+- **Authentication**: Supabase Auth with Google provider
+- **Database**: PostgreSQL via Supabase
+- **AI**: OpenAI GPT-4 for content summarization
+- **Styling**: Tailwind CSS
+- **Deployment**: Vercel
 
-### Backend
-- Node.js
-- Express
-- PostgreSQL (via Supabase)
-- OpenAI API for Summarization
+## Project Structure
 
-### Deployment
-- Vercel
+The project follows Next.js 14 App Router conventions:
+
+```
+/app                   # Next.js App Router directory
+  /api                 # API routes
+    /health            # Health check endpoint
+    /receive           # Endpoint for receiving URLs from iOS Shortcuts
+    /urls              # URL management endpoints
+      /cleanup         # Endpoint for cleaning up stuck URLs
+  /auth                # Authentication routes
+    /callback          # OAuth callback handler
+    /login             # Login page
+  /dashboard           # Dashboard page for viewing saved URLs
+  /debug               # Debug page with tools for testing and maintenance
+/components            # Reusable React components
+/lib                   # Utility functions and shared code
+/migrations            # Database migration scripts
+/public                # Static assets
+```
+
+## Environment Variables
+
+Create a `.env.local` file with the following variables:
+
+```
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+SUPABASE_SERVICE_KEY=your-supabase-service-key
+
+# OpenAI API Configuration
+OPENAI_API_KEY=your-openai-api-key
+OPENAI_MODEL=gpt-4-turbo
+
+# Site URL for authentication redirects
+NEXT_PUBLIC_SITE_URL=https://iphone-url-sharing-consolidate-johngleason-outlookcoms-projects.vercel.app
+```
+
+## Error Handling and Recovery
+
+The application includes robust error handling for the URL processing pipeline:
+
+1. **Timeout Protection**: OpenAI API calls have a 30-second timeout to prevent indefinite hanging
+2. **Detailed Error Logging**: All errors are logged with detailed information in the `url_processing_logs` table
+3. **Automatic Cleanup**: URLs that have been stuck in "pending" status for more than 10 minutes can be automatically marked as "failed"
+4. **Manual Intervention**: The debug page includes a tool to manually trigger the cleanup process for stuck URLs
+
+If you encounter URLs that are stuck in "pending" status:
+
+1. Go to the Debug page (`/debug`)
+2. Use the "Cleanup Stuck URLs" button to mark long-pending URLs as failed
+3. Check the error details for more information about what went wrong
 
 ## Getting Started
 
-### Prerequisites
-
-- Node.js (LTS version)
-- npm or yarn
-- Supabase account
-- OpenAI API access
-
-### Installation
-
-1. Clone the repository:
-   ```
-   git clone <repository-url>
-   cd iphone-url-sharing
-   ```
-
+1. Clone the repository
 2. Install dependencies:
    ```
-   # Install backend dependencies
-   cd backend
-   npm install
-
-   # Install frontend dependencies
-   cd ../frontend
    npm install
    ```
-
-3. Set up environment variables:
-   - Create a `.env` file in the `backend` directory with the following variables:
-     ```
-     PORT=3001
-     SUPABASE_URL=your_supabase_url
-     SUPABASE_KEY=your_supabase_key
-     OPENAI_API_KEY=your_openai_api_key
-     OPENAI_MODEL=gpt-4-turbo
-     FRONTEND_URL=http://localhost:3000
-     ```
-   - Create a `.env.local` file in the `frontend` directory with the following variables:
-     ```
-     NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-     NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-     NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
-     ```
-
-4. Start the development servers:
+3. Set up environment variables (see above)
+4. Run the development server:
    ```
-   # Start the backend server
-   cd backend
-   npm run dev
-
-   # Start the frontend server
-   cd ../frontend
    npm run dev
    ```
-
-5. Open your browser and navigate to `http://localhost:3000`
-
-## Setting Up the iOS Shortcut
-
-### Getting Your Personal API Key
-
-1. **Sign in to your account**
-   - Go to the dashboard and make sure you're signed in
-
-2. **Generate an API key**
-   - Navigate to Account Settings
-   - Click the "Generate New API Key" button
-   - Copy your API key (you'll only see it once)
-
-### Detailed Setup Guide
-
-1. **Open the Shortcuts app** on your iPhone
-   - If you don't have the Shortcuts app, download it from the App Store
-
-2. **Create a new shortcut**
-   - Tap the "+" button in the top right corner to create a new shortcut
-
-3. **Add the "Get Current URL" action**
-   - Tap "Add Action" and search for "Get Current URL"
-   - This action will get the URL of the current page you're viewing
-
-4. **Add the "Get Contents of URL" action**
-   - Search for "Get Contents of URL" and add it to your shortcut
-   - Configure it with the following settings:
-
-5. **Configure the action with these settings:**
-   - URL: `https://backend-johngleason-outlookcoms-projects.vercel.app/api/v1/urls`
-   - Method: POST
-   - Headers:
-     - Content-Type: application/json
-     - Authorization: Bearer YOUR_API_KEY_HERE
-   - Request Body: JSON
-     ```json
-     {
-       "url": "Shortcut Input",
-       "pageTitle": "Page Title",
-       "dateAccessed": "Current Date"
-     }
-     ```
-   - Replace `YOUR_API_KEY_HERE` with the API key you generated in the previous steps
-
-6. **Add a "Show Result" action**
-   - This will display the response from the API
-
-7. **Name your shortcut**
-   - Give it a name like "Save URL" and tap "Done"
-
-8. **Using the shortcut**
-   - While browsing a webpage, tap the share button
-   - Scroll down and tap on your shortcut name ("Save URL")
-   - The shortcut will run and send the URL to your dashboard
-
-### Accessing the Setup Guide
-
-A detailed setup guide with screenshots is available in the app at `/guide` after you sign in.
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
 
 ## Deployment
 
-### Backend
+The app is configured for deployment on Vercel. Connect your GitHub repository to Vercel and set the required environment variables in the Vercel dashboard.
 
-1. Deploy the backend to Vercel:
-   ```
-   cd backend
-   vercel
-   ```
+## iOS Shortcut Setup
 
-2. Set up the environment variables in the Vercel dashboard
+1. Create a new iOS Shortcut
+2. Add a "Share Sheet" input to receive URLs
+3. Add a "Get Contents of URL" action with the following settings:
+   - URL: `https://iphone-url-sharing-consolidate-johngleason-outlookcoms-projects.vercel.app/api/receive`
+   - Method: POST
+   - Headers:
+     - Content-Type: application/json
+     - x-api-key: your-api-key (found in the dashboard)
+   - Request Body: JSON with the URL and any additional metadata
 
-### Frontend
+## Supabase Setup
 
-1. Deploy the frontend to Vercel:
-   ```
-   cd frontend
-   vercel
-   ```
-
-2. Set up the environment variables in the Vercel dashboard
+1. Create a new Supabase project
+2. Set up the following tables:
+   - `urls`: For storing saved URLs and their metadata
+   - `api_keys`: For storing user API keys
+3. Configure authentication with Google OAuth provider
+4. Add the following URL configurations in Supabase Auth settings:
+   - Site URL: `https://iphone-url-sharing-consolidate-johngleason-outlookcoms-projects.vercel.app`
+   - Redirect URLs:
+     - `https://iphone-url-sharing-consolidate-johngleason-outlookcoms-projects.vercel.app/auth/callback`
+     - `http://localhost:3000/auth/callback` (for local development)
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+ISC
+
+## Acknowledgements
+
+- [Next.js](https://nextjs.org/)
+- [Supabase](https://supabase.io/)
+- [OpenAI](https://openai.com/)
+- [TailwindCSS](https://tailwindcss.com/) 
