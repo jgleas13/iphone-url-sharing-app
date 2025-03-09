@@ -37,6 +37,7 @@ function isPublicRoute(pathname: string): boolean {
     '/auth/login',
     '/auth/callback',
     '/api/receive',
+    '/api/receive-simple',
     '/api/test-openai-key',
   ];
   
