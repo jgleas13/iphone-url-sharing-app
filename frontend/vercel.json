@@ -8,6 +8,6 @@
   "env": {
     "NEXT_PUBLIC_SUPABASE_URL": "https://ylbkfzhkkcttwevgpyfv.supabase.co",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlsYmtmemhra2N0dHdldmdweWZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA4NjA5MzEsImV4cCI6MjA1NjQzNjkzMX0.MnFIML0acRkYjAVXFDKkyILdVV-40mbLy4wpedCJ8Fk",
-    "NEXT_PUBLIC_BACKEND_URL": "https://backend-ij4q9rol2-johngleason-outlookcoms-projects.vercel.app"
+    "NEXT_PUBLIC_BACKEND_URL": "https://backend-23l7prxuv-johngleason-outlookcoms-projects.vercel.app"
   }
 } 
