@@ -10,12 +10,15 @@ const openai = new OpenAI({
 });
 
 export async function POST(request: NextRequest) {
+  console.log(`[DEBUG] Received POST request to /api/receive`);
   try {
     // Parse the request body
     const body = await request.json();
     const { url, apiKey } = body;
+    console.log(`[DEBUG] Request body: URL=${url}, API Key=${apiKey ? apiKey.substring(0, 5) + '...' : 'not provided'}`);
 
     if (!url || !apiKey) {
+      console.log(`[DEBUG] Missing URL or API key`);
       return NextResponse.json(
         { error: 'URL and API key are required' },
         { status: 400 }
@@ -23,9 +26,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Create a Supabase client
+    console.log(`[DEBUG] Creating Supabase client`);
     const supabase = createRouteHandlerClient({ cookies });
 
     // Find the user associated with the API key
+    console.log(`[DEBUG] Looking up API key in database`);
     const { data: apiKeyData, error: apiKeyError } = await supabase
       .from('api_keys')
       .select('user_id')
@@ -33,6 +38,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (apiKeyError || !apiKeyData) {
+      console.log(`[DEBUG] Invalid API key: ${apiKeyError?.message || 'No data found'}`);
       return NextResponse.json(
         { error: 'Invalid API key' },
         { status: 401 }
@@ -40,8 +46,10 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = apiKeyData.user_id;
+    console.log(`[DEBUG] Found user ID: ${userId}`);
 
     // Create a new URL entry with pending status
+    console.log(`[DEBUG] Creating new URL entry with pending status`);
     const { data: urlData, error: urlError } = await supabase
       .from('urls')
       .insert([
@@ -55,6 +63,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (urlError) {
+      console.log(`[DEBUG] Failed to save URL: ${urlError.message}`);
       return NextResponse.json(
         { error: 'Failed to save URL' },
         { status: 500 }
@@ -62,18 +71,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Create initial processing log
+    console.log(`[DEBUG] Creating initial processing log`);
     await createProcessingLog(supabase, urlData.id, 'start', 'URL received for processing');
 
     // Process the URL in the background
+    console.log(`[DEBUG] Starting background processing for URL ID: ${urlData.id}`);
     processUrl(urlData.id, url, userId);
+    console.log(`[DEBUG] Background processing initiated`);
 
     return NextResponse.json({
       success: true,
       message: 'URL received and queued for processing',
       url_id: urlData.id,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error processing URL:', error);
+    console.log(`[DEBUG] Caught error in POST handler: ${error.message}`);
     return NextResponse.json(
       { error: 'Failed to process URL' },
       { status: 500 }
@@ -83,14 +96,17 @@ export async function POST(request: NextRequest) {
 
 // Function to process the URL and generate a summary
 async function processUrl(urlId: string, url: string, userId: string) {
+  console.log(`[DEBUG] Starting to process URL: ${url} (ID: ${urlId})`);
   const supabase = createRouteHandlerClient({ cookies });
   
   try {
     // Log validation step
+    console.log(`[DEBUG] URL validated, creating processing log`);
     await createProcessingLog(supabase, urlId, 'info', 'URL validated successfully');
     
     // Prepare OpenAI request with just the URL
     const prompt = `Please visit this URL and provide a title, a concise summary, and 3-5 relevant tags for the content: ${url}`;
+    console.log(`[DEBUG] Prepared prompt for OpenAI: ${prompt.substring(0, 100)}...`);
     
     // Create properly typed messages for OpenAI
     const messages: ChatCompletionMessageParam[] = [
@@ -112,6 +128,7 @@ async function processUrl(urlId: string, url: string, userId: string) {
     };
     
     // Log the OpenAI request
+    console.log(`[DEBUG] Logging OpenAI request to database`);
     await createProcessingLog(
       supabase, 
       urlId, 
@@ -122,6 +139,10 @@ async function processUrl(urlId: string, url: string, userId: string) {
     
     // Call OpenAI API
     const startTime = Date.now();
+    console.log(`[DEBUG] Starting OpenAI API call at ${new Date().toISOString()}`);
+    console.log(`[DEBUG] Using OpenAI API key: ${process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.substring(0, 5) + '...' : 'not set'}`);
+    console.log(`[DEBUG] Using OpenAI model: ${openaiRequest.model}`);
+    
     let completion: OpenAI.Chat.Completions.ChatCompletion;
     try {
       // Add a timeout to the OpenAI API call (30 seconds)
@@ -129,14 +150,17 @@ async function processUrl(urlId: string, url: string, userId: string) {
         setTimeout(() => reject(new Error('OpenAI API request timed out after 30 seconds')), 30000);
       });
       
+      console.log(`[DEBUG] Making OpenAI API request with timeout`);
       completion = await Promise.race([
         openai.chat.completions.create(openaiRequest),
         timeoutPromise
       ]) as OpenAI.Chat.Completions.ChatCompletion;
       
       const endTime = Date.now();
+      console.log(`[DEBUG] OpenAI API call completed in ${endTime - startTime}ms`);
       
       // Log the OpenAI response
+      console.log(`[DEBUG] Logging OpenAI response to database`);
       await createProcessingLog(
         supabase, 
         urlId, 
@@ -149,6 +173,10 @@ async function processUrl(urlId: string, url: string, userId: string) {
       const errorMessage = error.message || 'Unknown error';
       const errorType = error.type || 'unknown_error';
       const errorCode = error.code || 'unknown_code';
+      
+      console.log(`[DEBUG] OpenAI API error: ${errorMessage}`);
+      console.log(`[DEBUG] Error type: ${errorType}, code: ${errorCode}`);
+      console.log(`[DEBUG] Error stack: ${error.stack}`);
       
       // Log detailed error information
       await createProcessingLog(
@@ -166,6 +194,7 @@ async function processUrl(urlId: string, url: string, userId: string) {
       );
       
       // Update the URL status to failed
+      console.log(`[DEBUG] Updating URL status to failed`);
       await supabase
         .from('urls')
         .update({ 
@@ -179,6 +208,7 @@ async function processUrl(urlId: string, url: string, userId: string) {
     }
     
     // Extract title, summary and tags from the response
+    console.log(`[DEBUG] Extracting content from OpenAI response`);
     const responseContent = completion.choices[0]?.message?.content || '';
     
     // Parse the response to extract title, summary and tags
@@ -190,12 +220,18 @@ async function processUrl(urlId: string, url: string, userId: string) {
     const titleMatch = responseContent.match(/Title:([\s\S]*?)(?=\n\nSummary:)/);
     if (titleMatch && titleMatch[1]) {
       title = titleMatch[1].trim();
+      console.log(`[DEBUG] Extracted title: ${title}`);
+    } else {
+      console.log(`[DEBUG] Failed to extract title from response`);
     }
     
     // Extract summary
     const summaryMatch = responseContent.match(/Summary:([\s\S]*?)(?=\n\nTags:)/);
     if (summaryMatch && summaryMatch[1]) {
       summary = summaryMatch[1].trim();
+      console.log(`[DEBUG] Extracted summary: ${summary.substring(0, 50)}...`);
+    } else {
+      console.log(`[DEBUG] Failed to extract summary from response`);
     }
     
     // Extract tags
@@ -206,11 +242,15 @@ async function processUrl(urlId: string, url: string, userId: string) {
         .split(',')
         .map((tag: string) => tag.trim())
         .filter((tag: string) => tag.length > 0);
+      console.log(`[DEBUG] Extracted tags: ${tags.join(', ')}`);
+    } else {
+      console.log(`[DEBUG] Failed to extract tags from response`);
     }
     
     await createProcessingLog(supabase, urlId, 'info', 'Extracted summary and tags from OpenAI response');
     
     // Update the URL with the title, summary, tags, and status
+    console.log(`[DEBUG] Updating URL with extracted content`);
     await supabase
       .from('urls')
       .update({
@@ -221,9 +261,11 @@ async function processUrl(urlId: string, url: string, userId: string) {
       })
       .eq('id', urlId);
     
+    console.log(`[DEBUG] URL processing completed successfully for ${url} (ID: ${urlId})`);
     await createProcessingLog(supabase, urlId, 'end', 'URL processing completed successfully');
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error processing URL:', error);
+    console.log(`[DEBUG] Caught error in outer try/catch: ${error.message}`);
     
     // Log the error
     await createProcessingLog(
@@ -235,9 +277,13 @@ async function processUrl(urlId: string, url: string, userId: string) {
     );
     
     // Update the URL status to failed
+    console.log(`[DEBUG] Updating URL status to failed in outer catch block`);
     await supabase
       .from('urls')
-      .update({ status: 'failed' })
+      .update({ 
+        status: 'failed',
+        error_details: `Processing error: ${error.message}`
+      })
       .eq('id', urlId);
   }
 }
