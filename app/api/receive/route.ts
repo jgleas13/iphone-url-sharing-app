@@ -137,25 +137,38 @@ async function processUrl(urlId: string, url: string, userId: string) {
       JSON.stringify(openaiRequest, null, 2)
     );
     
-    // Call OpenAI API
+    // Call OpenAI API using fetch directly
     const startTime = Date.now();
     console.log(`[DEBUG] Starting OpenAI API call at ${new Date().toISOString()}`);
     console.log(`[DEBUG] Using OpenAI API key: ${process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.substring(0, 5) + '...' : 'not set'}`);
     console.log(`[DEBUG] Using OpenAI model: ${openaiRequest.model}`);
     
-    let completion: OpenAI.Chat.Completions.ChatCompletion;
+    // Create a controller for the timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    
     try {
-      // Add a timeout to the OpenAI API call (30 seconds)
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('OpenAI API request timed out after 30 seconds')), 30000);
+      // Make the API call with a timeout
+      console.log(`[DEBUG] Making OpenAI API request with timeout`);
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+        },
+        body: JSON.stringify(openaiRequest),
+        signal: controller.signal
       });
       
-      console.log(`[DEBUG] Making OpenAI API request with timeout`);
-      completion = await Promise.race([
-        openai.chat.completions.create(openaiRequest),
-        timeoutPromise
-      ]) as OpenAI.Chat.Completions.ChatCompletion;
+      // Clear the timeout
+      clearTimeout(timeoutId);
       
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`OpenAI API error: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`);
+      }
+      
+      const completion = await response.json();
       const endTime = Date.now();
       console.log(`[DEBUG] OpenAI API call completed in ${endTime - startTime}ms`);
       
@@ -168,28 +181,80 @@ async function processUrl(urlId: string, url: string, userId: string) {
         `Received response from OpenAI (${endTime - startTime}ms)`,
         JSON.stringify(completion, null, 2)
       );
-    } catch (error: any) {
-      const endTime = Date.now();
-      const errorMessage = error.message || 'Unknown error';
-      const errorType = error.type || 'unknown_error';
-      const errorCode = error.code || 'unknown_code';
       
+      // Extract content from the response
+      const responseContent = completion.choices[0]?.message?.content || '';
+      console.log(`[DEBUG] Extracted content from OpenAI response: ${responseContent.substring(0, 100)}...`);
+      
+      // Parse the response to extract title, summary and tags
+      let title = '';
+      let summary = '';
+      let tags: string[] = [];
+      
+      // Extract title
+      const titleMatch = responseContent.match(/Title:([\s\S]*?)(?=\n\nSummary:)/);
+      if (titleMatch && titleMatch[1]) {
+        title = titleMatch[1].trim();
+        console.log(`[DEBUG] Extracted title: ${title}`);
+      } else {
+        console.log(`[DEBUG] Failed to extract title from response`);
+      }
+      
+      // Extract summary
+      const summaryMatch = responseContent.match(/Summary:([\s\S]*?)(?=\n\nTags:)/);
+      if (summaryMatch && summaryMatch[1]) {
+        summary = summaryMatch[1].trim();
+        console.log(`[DEBUG] Extracted summary: ${summary.substring(0, 50)}...`);
+      } else {
+        console.log(`[DEBUG] Failed to extract summary from response`);
+      }
+      
+      // Extract tags
+      const tagsMatch = responseContent.match(/Tags:([\s\S]*?)$/);
+      if (tagsMatch && tagsMatch[1]) {
+        tags = tagsMatch[1]
+          .trim()
+          .split(',')
+          .map((tag: string) => tag.trim())
+          .filter((tag: string) => tag.length > 0);
+        console.log(`[DEBUG] Extracted tags: ${tags.join(', ')}`);
+      } else {
+        console.log(`[DEBUG] Failed to extract tags from response`);
+      }
+      
+      await createProcessingLog(supabase, urlId, 'info', 'Extracted summary and tags from OpenAI response');
+      
+      // Update the URL with the title, summary, tags, and status
+      console.log(`[DEBUG] Updating URL with extracted content`);
+      await supabase
+        .from('urls')
+        .update({
+          title: title || 'Untitled Page',
+          summary,
+          tags,
+          status: 'summarized',
+        })
+        .eq('id', urlId);
+      
+      console.log(`[DEBUG] URL processing completed successfully for ${url} (ID: ${urlId})`);
+      await createProcessingLog(supabase, urlId, 'end', 'URL processing completed successfully');
+    } catch (error: any) {
+      // Clear the timeout if it's still active
+      clearTimeout(timeoutId);
+      
+      // Handle the error
+      const errorMessage = error.message || 'Unknown error';
       console.log(`[DEBUG] OpenAI API error: ${errorMessage}`);
-      console.log(`[DEBUG] Error type: ${errorType}, code: ${errorCode}`);
-      console.log(`[DEBUG] Error stack: ${error.stack}`);
       
       // Log detailed error information
       await createProcessingLog(
         supabase, 
         urlId, 
         'error', 
-        `OpenAI API error: ${errorMessage} (${endTime - startTime}ms)`,
+        `OpenAI API error: ${errorMessage}`,
         JSON.stringify({
           message: errorMessage,
-          type: errorType,
-          code: errorCode,
-          stack: error.stack,
-          request: openaiRequest
+          stack: error.stack
         }, null, 2)
       );
       
@@ -206,63 +271,6 @@ async function processUrl(urlId: string, url: string, userId: string) {
       // Re-throw the error to be caught by the outer try/catch
       throw error;
     }
-    
-    // Extract title, summary and tags from the response
-    console.log(`[DEBUG] Extracting content from OpenAI response`);
-    const responseContent = completion.choices[0]?.message?.content || '';
-    
-    // Parse the response to extract title, summary and tags
-    let title = '';
-    let summary = '';
-    let tags: string[] = [];
-    
-    // Extract title
-    const titleMatch = responseContent.match(/Title:([\s\S]*?)(?=\n\nSummary:)/);
-    if (titleMatch && titleMatch[1]) {
-      title = titleMatch[1].trim();
-      console.log(`[DEBUG] Extracted title: ${title}`);
-    } else {
-      console.log(`[DEBUG] Failed to extract title from response`);
-    }
-    
-    // Extract summary
-    const summaryMatch = responseContent.match(/Summary:([\s\S]*?)(?=\n\nTags:)/);
-    if (summaryMatch && summaryMatch[1]) {
-      summary = summaryMatch[1].trim();
-      console.log(`[DEBUG] Extracted summary: ${summary.substring(0, 50)}...`);
-    } else {
-      console.log(`[DEBUG] Failed to extract summary from response`);
-    }
-    
-    // Extract tags
-    const tagsMatch = responseContent.match(/Tags:([\s\S]*?)$/);
-    if (tagsMatch && tagsMatch[1]) {
-      tags = tagsMatch[1]
-        .trim()
-        .split(',')
-        .map((tag: string) => tag.trim())
-        .filter((tag: string) => tag.length > 0);
-      console.log(`[DEBUG] Extracted tags: ${tags.join(', ')}`);
-    } else {
-      console.log(`[DEBUG] Failed to extract tags from response`);
-    }
-    
-    await createProcessingLog(supabase, urlId, 'info', 'Extracted summary and tags from OpenAI response');
-    
-    // Update the URL with the title, summary, tags, and status
-    console.log(`[DEBUG] Updating URL with extracted content`);
-    await supabase
-      .from('urls')
-      .update({
-        title: title || 'Untitled Page',
-        summary,
-        tags,
-        status: 'summarized',
-      })
-      .eq('id', urlId);
-    
-    console.log(`[DEBUG] URL processing completed successfully for ${url} (ID: ${urlId})`);
-    await createProcessingLog(supabase, urlId, 'end', 'URL processing completed successfully');
   } catch (error: any) {
     console.error('Error processing URL:', error);
     console.log(`[DEBUG] Caught error in outer try/catch: ${error.message}`);
