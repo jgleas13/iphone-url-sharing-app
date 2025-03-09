@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
 // Skip authentication for this endpoint
-export const config = {
-  runtime: 'edge',
-};
+export const runtime = 'edge';
 
 export async function GET(request: NextRequest) {
   console.log('[DEBUG] Testing OpenAI API key');
