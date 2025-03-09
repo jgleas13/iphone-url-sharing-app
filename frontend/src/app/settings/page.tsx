@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import ServerNavigation from '@/components/ServerNavigation';
 
 export default function Settings() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, getSession } = useAuth();
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
@@ -28,12 +28,18 @@ export default function Settings() {
       setSuccessMessage(null);
       
       // In development mode, generate a mock API key
-      if (process.env.NODE_ENV === 'development') {
+      if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_MOCK_API_KEYS === 'true') {
         const mockApiKey = `ipus_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
         setApiKey(mockApiKey);
         setShowApiKey(true);
         setSuccessMessage('API key generated successfully!');
         return;
+      }
+      
+      // Get the current session
+      const session = await getSession();
+      if (!session) {
+        throw new Error('No active session found');
       }
       
       // In production, call the backend API
@@ -42,21 +48,26 @@ export default function Settings() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('supabase.auth.token')}`
+          'Authorization': `Bearer ${session.access_token}`
         }
       });
       
       if (!response.ok) {
-        throw new Error(`Failed to generate API key: ${response.statusText}`);
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || `Failed to generate API key: ${response.statusText}`);
       }
       
       const data = await response.json();
+      if (!data.success || !data.apiKey) {
+        throw new Error(data.message || 'Failed to generate API key');
+      }
+      
       setApiKey(data.apiKey);
       setShowApiKey(true);
       setSuccessMessage('API key generated successfully!');
     } catch (error) {
       console.error('Error generating API key:', error);
-      setError('Failed to generate API key. Please try again later.');
+      setError(error instanceof Error ? error.message : 'Failed to generate API key. Please try again later.');
     } finally {
       setIsGenerating(false);
     }

@@ -1,6 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { createClient } from '@supabase/supabase-js';
 import urlRoutes from './routes/urls';
 import apiKeyRoutes from './routes/apiKeys';
 
@@ -11,48 +12,56 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3001;
 
-// Authentication middleware function
-const authMiddleware = (req: Request, res: Response, next: NextFunction): void => {
-  // Skip auth check in development
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[Auth] Development mode - skipping authentication');
-    
-    // For API endpoints that need user ID, set a test user ID
-    const path = req.path;
-    if (path.includes('/api/v1/urls')) {
-      console.log('[Auth] Setting test user ID for development mode');
-      (req as any).userId = 'test_user_123';
-    }
-    
-    return next();
-  }
+// Initialize Supabase client
+const supabaseUrl = process.env.SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-  console.log('[Auth] Checking authentication');
-  
-  // Get the authorization header
-  const authHeader = req.headers.authorization;
-  
-  // Check if the request is from Vercel
-  const isVercelRequest = req.headers['x-vercel-deployment-url'] || 
-                          req.headers['x-vercel-id'] ||
-                          req.headers['x-forwarded-host']?.toString().includes('vercel.app');
-  
-  // If it's a Vercel request or has a valid auth header, proceed
-  if (isVercelRequest || (authHeader && authHeader.startsWith('Bearer '))) {
-    console.log('[Auth] Authentication successful');
-    return next();
+// Authentication middleware function
+const authMiddleware = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    // For the health check endpoint, allow without auth
+    if (req.path === '/health') {
+      return next();
+    }
+
+    // Skip auth check in development if explicitly set
+    if (process.env.SKIP_AUTH === 'true' && process.env.NODE_ENV === 'development') {
+      console.log('[Auth] Development mode - skipping authentication');
+      (req as any).userId = 'test_user_123';
+      return next();
+    }
+
+    console.log('[Auth] Checking authentication');
+    
+    // Get the authorization header
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new Error('No valid authorization header found');
+    }
+
+    // Extract the JWT token
+    const token = authHeader.split(' ')[1];
+    
+    // Verify the JWT token with Supabase
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    
+    if (error || !user) {
+      throw new Error('Invalid token');
+    }
+
+    // Add the user ID to the request
+    (req as any).userId = user.id;
+    console.log('[Auth] Authentication successful for user:', user.id);
+    next();
+  } catch (error) {
+    console.error('[Auth] Authentication failed:', error);
+    res.status(401).json({ 
+      error: 'Authentication failed',
+      message: 'Please provide valid authentication credentials'
+    });
   }
-  
-  // For the health check endpoint, allow without auth
-  if (req.path === '/health') {
-    return next();
-  }
-  
-  console.log('[Auth] Authentication failed');
-  res.status(401).json({ 
-    error: 'Authentication required',
-    message: 'Please provide valid authentication credentials'
-  });
 };
 
 // Middleware

@@ -11,6 +11,7 @@ interface AuthContextType {
   isLoading: boolean;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
+  getSession: () => Promise<Session | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -87,12 +88,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const getSession = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      return session;
+    } catch (error) {
+      console.error('Error getting session:', error);
+      return null;
+    }
+  };
+
   const value = {
     user,
     session,
     isLoading,
     signIn,
     signOut,
+    getSession,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
