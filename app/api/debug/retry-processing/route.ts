@@ -187,8 +187,92 @@ export async function POST(request: Request) {
           rawResponse = summaryResponse;
           await createLog(supabase, urlId, 'api_response', 'Received summary response', summaryResponse);
           
+          // Check if the response is a fallback response
+          const isGrokFallback = summaryResponse.choices && 
+              summaryResponse.choices.length > 0 && 
+              (summaryResponse.choices[0].finish_reason === 'fallback' || 
+               (summaryResponse.id === 'fallback-response'));
+          
+          if (isGrokFallback) {
+            await createLog(
+              supabase, 
+              urlId, 
+              'error', 
+              'Received fallback response from Grok API. URL might be inaccessible or require authentication.'
+            );
+            
+            // Extract content from either message format
+            let fallbackContent = '';
+            const choice = summaryResponse.choices[0];
+            
+            if ('message' in choice && choice.message && choice.message.content) {
+              fallbackContent = choice.message.content.trim();
+            } else if ('text' in choice && choice.text) {
+              fallbackContent = choice.text.trim();
+            }
+            
+            if (fallbackContent) {
+              summary = fallbackContent;
+              
+              // Update URL with fallback indicator
+              const { error: updateError } = await supabase
+                .from('urls')
+                .update({
+                  title: title,
+                  summary: summary,
+                  key_points: [], // No key points for fallback
+                  tags: ['fallback', 'error', 'retry'],
+                  status: 'fallback', // Use a special status for fallbacks
+                  error_details: 'API returned a fallback response. URL might be inaccessible or require authentication.',
+                  debug_info: {
+                    api_request: useGrok ? summaryPromptFilled : { summaryPrompt: summaryPromptFilled },
+                    api_response: summaryResponse,
+                    raw_response: rawResponse,
+                    processing_steps: [
+                      'Initialized API client',
+                      'Received fallback response from API',
+                      'Saved fallback summary'
+                    ],
+                    processing_time: new Date().toISOString(),
+                    is_fallback: true
+                  }
+                })
+                .eq('id', urlId);
+                
+              if (updateError) {
+                await createLog(supabase, urlId, 'error', `Failed to update URL with fallback content: ${updateError.message}`);
+                throw new Error(`Failed to update URL with fallback content: ${updateError.message}`);
+              }
+              
+              await createLog(supabase, urlId, 'info', 'URL processing completed with fallback content');
+              
+              return NextResponse.json({
+                success: true,
+                message: 'URL processing completed with fallback content',
+                is_fallback: true,
+                details: {
+                  title,
+                  summary: summary.substring(0, 100) + '...',
+                  keyPointsCount: 0,
+                  tagsCount: 3,
+                  status: 'fallback'
+                },
+                response: summaryResponse
+              });
+            }
+            
+            throw new Error('Received fallback response from API but no content was available');
+          }
+          
           if (summaryResponse.choices && summaryResponse.choices.length > 0) {
-            summary = summaryResponse.choices[0].text.trim();
+            const choice = summaryResponse.choices[0];
+            if ('message' in choice && choice.message && choice.message.content) {
+              summary = choice.message.content.trim();
+            } else if ('text' in choice && choice.text) {
+              summary = choice.text.trim();
+            } else {
+              throw new Error('No summary content returned from Grok API');
+            }
           } else {
             throw new Error('No summary returned from Grok API');
           }
@@ -260,8 +344,88 @@ export async function POST(request: Request) {
           rawResponse = summaryResponse;
           await createLog(supabase, urlId, 'api_response', 'Received summary response', summaryResponse);
           
+          // Check if the response is a fallback response (unlikely with OpenAI, but adding for consistency)
+          const isOpenAIFallback = summaryResponse.choices && 
+              summaryResponse.choices.length > 0 && 
+              summaryResponse.choices[0].finish_reason === 'fallback';
+          
+          if (isOpenAIFallback) {
+            await createLog(
+              supabase, 
+              urlId, 
+              'error', 
+              'Received fallback response from OpenAI API. URL might be inaccessible or require authentication.'
+            );
+            
+            // Extract content from the choice
+            let fallbackContent = '';
+            const choice = summaryResponse.choices[0];
+            
+            if (choice.message && choice.message.content) {
+              fallbackContent = choice.message.content.trim();
+            }
+            
+            if (fallbackContent) {
+              summary = fallbackContent;
+              
+              // Update URL with fallback indicator
+              const { error: updateError } = await supabase
+                .from('urls')
+                .update({
+                  title: title,
+                  summary: summary,
+                  key_points: [], // No key points for fallback
+                  tags: ['fallback', 'error', 'retry'],
+                  status: 'fallback', // Use a special status for fallbacks
+                  error_details: 'API returned a fallback response. URL might be inaccessible or require authentication.',
+                  debug_info: {
+                    api_request: useGrok ? summaryPromptFilled : { summaryPrompt: summaryPromptFilled },
+                    api_response: summaryResponse,
+                    raw_response: rawResponse,
+                    processing_steps: [
+                      'Initialized API client',
+                      'Received fallback response from API',
+                      'Saved fallback summary'
+                    ],
+                    processing_time: new Date().toISOString(),
+                    is_fallback: true
+                  }
+                })
+                .eq('id', urlId);
+                
+              if (updateError) {
+                await createLog(supabase, urlId, 'error', `Failed to update URL with fallback content: ${updateError.message}`);
+                throw new Error(`Failed to update URL with fallback content: ${updateError.message}`);
+              }
+              
+              await createLog(supabase, urlId, 'info', 'URL processing completed with fallback content');
+              
+              return NextResponse.json({
+                success: true,
+                message: 'URL processing completed with fallback content',
+                is_fallback: true,
+                details: {
+                  title,
+                  summary: summary.substring(0, 100) + '...',
+                  keyPointsCount: 0,
+                  tagsCount: 3,
+                  status: 'fallback'
+                },
+                response: summaryResponse
+              });
+            }
+            
+            throw new Error('Received fallback response from API but no content was available');
+          }
+          
           if (summaryResponse.choices && summaryResponse.choices.length > 0) {
-            summary = summaryResponse.choices[0].message.content?.trim() || '';
+            if (summaryResponse.choices[0].message && summaryResponse.choices[0].message.content) {
+              summary = summaryResponse.choices[0].message.content.trim();
+            } else {
+              throw new Error('No summary content returned from OpenAI API');
+            }
+          } else {
+            throw new Error('No summary returned from OpenAI API');
           }
           
           // Generate key takeaways

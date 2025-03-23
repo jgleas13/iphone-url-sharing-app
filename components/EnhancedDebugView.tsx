@@ -49,6 +49,29 @@ export default function EnhancedDebugView({ urlId, logs, isLoading }: EnhancedDe
         data: log.data ? JSON.parse(log.data) : undefined
       };
 
+      // Check for fallback responses
+      if (log.type === 'api_response' && log.data) {
+        try {
+          const data = typeof log.data === 'string' ? JSON.parse(log.data) : log.data;
+          if (data.choices && 
+              data.choices.length > 0 && 
+              ((data.choices[0].finish_reason === 'fallback') || 
+               (data.id === 'fallback-response'))) {
+            // Clone the step and mark it as a fallback
+            const fallbackStep: ProcessingStep = {
+              ...step,
+              id: `${log.id}-fallback`,
+              type: 'fallback',
+              message: 'Fallback response detected - URL might be inaccessible or require authentication'
+            };
+            steps.push(fallbackStep);
+            errorLogs.push(fallbackStep);
+          }
+        } catch (e) {
+          console.error('Error parsing API response data:', e);
+        }
+      }
+
       // Add to the main timeline
       steps.push(step);
 
@@ -93,6 +116,8 @@ export default function EnhancedDebugView({ urlId, logs, isLoading }: EnhancedDe
         return { icon: '⬇️', bgColor: 'bg-green-50', textColor: 'text-green-800' };
       case 'raw_response':
         return { icon: '📦', bgColor: 'bg-yellow-50', textColor: 'text-yellow-800' };
+      case 'fallback':
+        return { icon: '⚠️', bgColor: 'bg-orange-50', textColor: 'text-orange-800' };
       default:
         return { icon: '📝', bgColor: 'bg-gray-50', textColor: 'text-gray-800' };
     }
@@ -115,10 +140,24 @@ export default function EnhancedDebugView({ urlId, logs, isLoading }: EnhancedDe
     if (!data) return null;
 
     try {
+      // Check if this is a fallback response
+      const isFallback = typeof data === 'object' && 
+        data.choices && 
+        data.choices.length > 0 && 
+        ((data.choices[0].finish_reason === 'fallback') ||
+         (data.id === 'fallback-response'));
+
       return (
-        <pre className="mt-2 p-3 bg-gray-800 text-white rounded text-xs overflow-auto max-h-[400px] whitespace-pre-wrap">
-          {typeof data === 'string' ? data : JSON.stringify(data, null, 2)}
-        </pre>
+        <div>
+          {isFallback && (
+            <div className="mb-2 p-2 bg-orange-100 text-orange-800 rounded text-sm">
+              ⚠️ This is a fallback response. The URL might be inaccessible or require authentication.
+            </div>
+          )}
+          <pre className={`mt-2 p-3 ${isFallback ? 'bg-orange-900' : 'bg-gray-800'} text-white rounded text-xs overflow-auto max-h-[400px] whitespace-pre-wrap`}>
+            {typeof data === 'string' ? data : JSON.stringify(data, null, 2)}
+          </pre>
+        </div>
       );
     } catch (error) {
       return <div className="text-red-500 text-sm mt-2">Error displaying data: {String(error)}</div>;

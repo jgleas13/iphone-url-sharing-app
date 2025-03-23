@@ -370,9 +370,16 @@ export default function UrlDiagnosticsPage() {
                       ? 'bg-yellow-100 text-yellow-800' 
                       : selectedUrl.status === 'summarized' 
                         ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
+                        : selectedUrl.status === 'fallback'
+                          ? 'bg-purple-100 text-purple-800'
+                          : 'bg-red-100 text-red-800'
                   }`}>
                     {selectedUrl.status}
+                    {selectedUrl.status === 'fallback' && (
+                      <span className="ml-1" title="Fallback content was generated because the URL was inaccessible or required authentication">
+                        ⚠️
+                      </span>
+                    )}
                   </span>
                 </p>
               </div>
@@ -409,14 +416,40 @@ export default function UrlDiagnosticsPage() {
         {/* Retry Result */}
         {retryResult && (
           <div className={`bg-white rounded-lg border ${
-            retryResult.success ? 'border-green-200' : 'border-red-200'
+            retryResult.success && !retryResult.is_fallback 
+              ? 'border-green-200' 
+              : retryResult.success && retryResult.is_fallback
+                ? 'border-yellow-200'
+                : 'border-red-200'
           } shadow-md p-6 mb-4`}>
-            <h3 className="text-lg font-medium mb-4">Retry Result</h3>
+            <h3 className="text-lg font-medium mb-4">
+              Retry Result
+              {retryResult.is_fallback && (
+                <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                  Fallback
+                </span>
+              )}
+            </h3>
             <div className={`p-4 rounded ${
-              retryResult.success ? 'bg-green-50' : 'bg-red-50'
+              retryResult.success && !retryResult.is_fallback 
+                ? 'bg-green-50' 
+                : retryResult.success && retryResult.is_fallback
+                  ? 'bg-yellow-50'
+                  : 'bg-red-50'
             }`}>
-              <p className={retryResult.success ? 'text-green-800' : 'text-red-800'}>
-                {retryResult.success ? 'Processing completed successfully!' : retryResult.error || 'Processing failed.'}
+              <p className={
+                retryResult.success && !retryResult.is_fallback 
+                  ? 'text-green-800' 
+                  : retryResult.success && retryResult.is_fallback
+                    ? 'text-yellow-800'
+                    : 'text-red-800'
+              }>
+                {retryResult.success && !retryResult.is_fallback 
+                  ? 'Processing completed successfully!' 
+                  : retryResult.success && retryResult.is_fallback
+                    ? 'Processing completed with fallback content. The URL might be inaccessible or require authentication.'
+                    : retryResult.error || 'Processing failed.'
+                }
               </p>
               
               {retryResult.details && (
@@ -426,6 +459,15 @@ export default function UrlDiagnosticsPage() {
                     {typeof retryResult.details === 'object' 
                       ? JSON.stringify(retryResult.details, null, 2) 
                       : retryResult.details}
+                  </pre>
+                </div>
+              )}
+              
+              {retryResult.response && (
+                <div className="mt-3">
+                  <p className="text-sm font-medium mb-1">API Response:</p>
+                  <pre className="text-xs bg-gray-800 text-white p-3 rounded overflow-x-auto max-h-60 overflow-y-auto">
+                    {JSON.stringify(retryResult.response, null, 2)}
                   </pre>
                 </div>
               )}
