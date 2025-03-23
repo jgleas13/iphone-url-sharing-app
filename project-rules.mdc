@@ -1,6 +1,39 @@
----
-description: 
-globs: 
-alwaysApply: false
----
- 
+*   **cursor**
+
+    *   Utilize real-time AI-powered suggestions to enforce code quality and standards.
+    *   Follow best practices in code reviews and commit message clarity.
+    *   Integrate Cursor with existing CI/CD pipelines to maintain continuous improvement.
+
+## Debugging with Browser MCP
+
+*   **Console Logging**
+
+    *   Use `mcp__getConsoleLogs` to retrieve all browser console logs during development and debugging sessions.
+    *   Leverage `mcp__getConsoleErrors` to specifically target and isolate error messages in the console for faster troubleshooting.
+    *   Implement structured logging patterns in client-side code to make console logs more readable and actionable.
+
+*   **Network Monitoring**
+
+    *   Utilize `mcp__getNetworkErrorLogs` to identify failed API requests, particularly for iOS Shortcut submissions and Grok API interactions.
+    *   Use `mcp__getNetworkSuccessLogs` to verify successful data transmission between components and external services.
+    *   Monitor API response times and payload sizes to optimize performance, especially for mobile users sharing URLs.
+
+*   **Visual Debugging**
+
+    *   Employ `mcp__takeScreenshot` to capture the current state of the UI during testing and bug reproduction.
+    *   Use `mcp__getSelectedElement` to inspect specific DOM elements when troubleshooting UI rendering issues.
+    *   Document visual regressions with screenshots to ensure consistent UI across different devices and browsers.
+
+*   **Debugging Workflow**
+
+    *   Start debugging sessions with `mcp__wipeLogs` to clear previous logs and ensure clean test environments.
+    *   Implement a systematic approach: first check console errors, then network logs, and finally visual elements.
+    *   For complex issues, combine multiple MCP tools to create comprehensive debugging reports that include console logs, network activity, and visual evidence.
+
+*   **Performance Optimization**
+
+    *   Use browser MCP tools to identify client-side performance bottlenecks, particularly in the dashboard view when displaying many saved URLs.
+    *   Monitor memory usage and rendering performance to ensure smooth operation on both desktop and mobile browsers.
+    *   Implement performance budgets and regularly test against them using MCP debugging tools.
+
+## Rules 

@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
   try {
     // Parse the request body
     const body = await request.json();
-    const { url, apiKey } = body;
+    const { url, apiKey, title, tags } = body;
     console.log(`[DEBUG] Request body: URL=${url}, API Key=${apiKey ? apiKey.substring(0, 5) + '...' : 'not provided'}`);
 
     if (!url || !apiKey) {
@@ -41,18 +41,27 @@ export async function POST(request: NextRequest) {
     const userId = apiKeyData.user_id;
     console.log(`[DEBUG] Found user ID: ${userId}`);
 
-    // Create a new URL entry with summarized status (skipping OpenAI processing)
-    console.log(`[DEBUG] Creating new URL entry with summarized status`);
+    // Process tags if provided
+    let parsedTags = null;
+    if (tags) {
+      if (Array.isArray(tags)) {
+        parsedTags = tags;
+      } else if (typeof tags === 'string') {
+        parsedTags = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+      }
+    }
+
+    // Create a new URL entry with manual status
+    console.log(`[DEBUG] Creating new URL entry with manual status`);
     const { data: urlData, error: urlError } = await supabase
       .from('urls')
       .insert([
         {
           user_id: userId,
           url: url,
-          title: 'URL from iOS Shortcut',
-          summary: 'This URL was saved without AI processing.',
-          tags: ['unprocessed'],
-          status: 'summarized',
+          title: title || 'Untitled Page',
+          tags: parsedTags,
+          status: 'manual', // This URL was added manually
         },
       ])
       .select()
@@ -66,17 +75,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`[DEBUG] URL saved successfully: ${urlData.id}`);
+    // Create a log entry
+    try {
+      await supabase
+        .from('url_processing_logs')
+        .insert([
+          {
+            url_id: urlData.id,
+            type: 'info',
+            message: 'URL added manually via simple API',
+          },
+        ]);
+    } catch (logError) {
+      console.error(`[ERROR] Failed to create log entry:`, logError);
+      // Continue execution even if logging fails
+    }
+
     return NextResponse.json({
       success: true,
-      message: 'URL saved successfully (without AI processing)',
+      message: 'URL saved successfully',
       url_id: urlData.id,
     });
   } catch (error: any) {
-    console.error('Error saving URL:', error);
+    console.error('Error processing URL:', error);
     console.log(`[DEBUG] Caught error in POST handler: ${error.message}`);
     return NextResponse.json(
-      { error: 'Failed to save URL' },
+      { error: 'Failed to process URL' },
       { status: 500 }
     );
   }

@@ -1,48 +1,26 @@
 #!/bin/bash
 
-echo "=== Starting iPhone URL Sharing Development Environment ==="
+# Colors for terminal output
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
 
-# Clean up existing processes
-echo "Cleaning up existing processes..."
-FRONTEND_PID=$(lsof -ti:3000)
-if [ -n "$FRONTEND_PID" ]; then
-  echo "Killing process on port 3000: $FRONTEND_PID"
-  kill -9 $FRONTEND_PID
-else
-  echo "No process running on port 3000"
+echo -e "${BLUE}Starting iPhone URL Sharing App development server...${NC}"
+echo -e "${YELLOW}Make sure you have set up your .env.local file with the required environment variables.${NC}"
+echo ""
+
+# Check if .env.local exists
+if [ ! -f .env.local ]; then
+  echo -e "${YELLOW}Warning: .env.local file not found. Creating from example...${NC}"
+  if [ -f .env.local.example ]; then
+    cp .env.local.example .env.local
+    echo -e "${GREEN}Created .env.local from example. Please update with your actual values.${NC}"
+  else
+    echo -e "${YELLOW}No .env.local.example found. You'll need to create .env.local manually.${NC}"
+  fi
 fi
 
-BACKEND_PID=$(lsof -ti:3001)
-if [ -n "$BACKEND_PID" ]; then
-  echo "Killing process on port 3001: $BACKEND_PID"
-  kill -9 $BACKEND_PID
-else
-  echo "No process running on port 3001"
-fi
-
-# Start backend
-echo "Starting backend server on port 3001..."
-cd backend
-npm run dev &
-BACKEND_PID=$!
-echo "Backend started with PID: $BACKEND_PID"
-
-# Wait for backend to initialize
-echo "Waiting for backend to initialize..."
-sleep 3
-
-# Start frontend
-echo "Starting frontend server on port 3000..."
-cd ../frontend
-npm run dev &
-FRONTEND_PID=$!
-echo "Frontend started with PID: $FRONTEND_PID"
-
-echo "=== Development environment is now running ==="
-echo "Frontend: http://localhost:3000"
-echo "Backend: http://localhost:3001"
-echo "Press Ctrl+C to stop all services"
-
-# Wait for Ctrl+C
-trap "echo 'Stopping services...'; kill $BACKEND_PID $FRONTEND_PID 2>/dev/null; exit" INT
-wait 
+# Start the development server
+echo -e "${GREEN}Starting Next.js development server...${NC}"
+npm run dev 
