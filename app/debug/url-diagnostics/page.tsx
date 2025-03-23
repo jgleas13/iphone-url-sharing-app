@@ -9,6 +9,7 @@ import PendingUrlsList, { UrlItem } from '../../../components/PendingUrlsList';
 import ProcessingLogViewer from '../../../components/ProcessingLogViewer';
 import UrlDebugInfo from '../../../components/UrlDebugInfo';
 import StuckUrlsCleanup from '../../../components/StuckUrlsCleanup';
+import EnhancedDebugView from '../../../components/EnhancedDebugView';
 
 interface ProcessingLog {
   id: string;
@@ -32,6 +33,9 @@ export default function UrlDiagnosticsPage() {
   const [processingLogs, setProcessingLogs] = useState<ProcessingLog[]>([]);
   const [envInfo, setEnvInfo] = useState<any>({});
   const [retryResult, setRetryResult] = useState<any>(null);
+  const [viewMode, setViewMode] = useState<'standard' | 'enhanced'>('enhanced');
+  const [grokRequestPayload, setGrokRequestPayload] = useState<any>(null);
+  const [grokResponsePayload, setGrokResponsePayload] = useState<any>(null);
 
   // Check authentication
   useEffect(() => {
@@ -104,6 +108,8 @@ export default function UrlDiagnosticsPage() {
   const selectUrl = async (url: UrlItem) => {
     setSelectedUrl(url);
     setRetryResult(null);
+    setGrokRequestPayload(null);
+    setGrokResponsePayload(null);
     
     // Fetch processing logs for the selected URL
     setIsLogsLoading(true);
@@ -112,6 +118,31 @@ export default function UrlDiagnosticsPage() {
       if (response.ok) {
         const data = await response.json();
         setProcessingLogs(data.logs || []);
+        
+        // Extract Grok API request and response from logs if available
+        let apiRequest = null;
+        let apiResponse = null;
+        
+        for (const log of data.logs || []) {
+          try {
+            if (log.type === 'api_request' && log.data) {
+              const parsedData = typeof log.data === 'string' ? JSON.parse(log.data) : log.data;
+              if (parsedData.prompt && (log.message.includes('summary') || log.message.includes('Grok'))) {
+                apiRequest = parsedData;
+              }
+            } else if (log.type === 'api_response' && log.data) {
+              const parsedData = typeof log.data === 'string' ? JSON.parse(log.data) : log.data;
+              if (parsedData.choices && (log.message.includes('summary') || log.message.includes('Grok'))) {
+                apiResponse = parsedData;
+              }
+            }
+          } catch (error) {
+            console.error('Error parsing log data:', error);
+          }
+        }
+        
+        setGrokRequestPayload(apiRequest);
+        setGrokResponsePayload(apiResponse);
       } else {
         console.error('Failed to fetch URL logs:', await response.text());
         setProcessingLogs([]);
@@ -160,6 +191,31 @@ export default function UrlDiagnosticsPage() {
       if (logsResponse.ok) {
         const logsData = await logsResponse.json();
         setProcessingLogs(logsData.logs || []);
+        
+        // Re-extract Grok API request and response
+        let apiRequest = null;
+        let apiResponse = null;
+        
+        for (const log of logsData.logs || []) {
+          try {
+            if (log.type === 'api_request' && log.data) {
+              const parsedData = typeof log.data === 'string' ? JSON.parse(log.data) : log.data;
+              if (parsedData.prompt && (log.message.includes('summary') || log.message.includes('Grok'))) {
+                apiRequest = parsedData;
+              }
+            } else if (log.type === 'api_response' && log.data) {
+              const parsedData = typeof log.data === 'string' ? JSON.parse(log.data) : log.data;
+              if (parsedData.choices && (log.message.includes('summary') || log.message.includes('Grok'))) {
+                apiResponse = parsedData;
+              }
+            }
+          } catch (error) {
+            console.error('Error parsing log data:', error);
+          }
+        }
+        
+        setGrokRequestPayload(apiRequest);
+        setGrokResponsePayload(apiResponse);
       }
     } catch (error) {
       console.error('Error retrying URL processing:', error);
@@ -206,11 +262,30 @@ export default function UrlDiagnosticsPage() {
     );
   }
 
+  // Extract timeline from logs
+  const createProcessingTimeline = () => {
+    if (!processingLogs || processingLogs.length === 0) return [];
+    
+    return processingLogs
+      .filter(log => log.type === 'info' || log.type === 'error')
+      .map(log => {
+        const date = new Date(log.created_at);
+        const formattedTime = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        return `${formattedTime}: ${log.message}`;
+      });
+  };
+
   return (
     <div className="container mx-auto p-4 pb-16 max-w-6xl">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">URL Processing Diagnostics</h1>
         <div>
+          <button
+            onClick={() => setViewMode(viewMode === 'standard' ? 'enhanced' : 'standard')}
+            className="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded mr-4"
+          >
+            {viewMode === 'standard' ? 'Switch to Enhanced View' : 'Switch to Standard View'}
+          </button>
           <Link 
             href="/debug" 
             className="text-blue-600 hover:text-blue-800 mr-4"
@@ -276,7 +351,7 @@ export default function UrlDiagnosticsPage() {
                     </svg>
                     Processing...
                   </div>
-                ) : 'Retry Processing'}
+                ) : 'Debug Retry Processing'}
               </button>
             </div>
             
@@ -316,6 +391,18 @@ export default function UrlDiagnosticsPage() {
                 <p className="text-sm bg-red-50 p-2 rounded text-red-800">{selectedUrl.error_details}</p>
               </div>
             )}
+            
+            {/* Processing Timeline */}
+            <div className="mt-4">
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Processing Timeline</h4>
+              <div className="bg-gray-50 p-3 rounded text-sm">
+                <ul className="list-disc pl-5 space-y-1">
+                  {createProcessingTimeline().map((step, index) => (
+                    <li key={index}>{step}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
           </div>
         )}
         
@@ -346,19 +433,80 @@ export default function UrlDiagnosticsPage() {
           </div>
         )}
         
-        {/* URL Debug Info */}
-        {selectedUrl && (
-          <UrlDebugInfo urlInfo={selectedUrl} isLoading={false} />
+        {/* Enhanced Debug View */}
+        {selectedUrl && viewMode === 'enhanced' && (
+          <EnhancedDebugView 
+            urlId={selectedUrl.id}
+            logs={processingLogs}
+            isLoading={isLogsLoading}
+          />
         )}
         
-        {/* Processing Logs */}
-        {selectedUrl && (
-          <div className="bg-white rounded-lg border border-gray-200 shadow-md p-6 mb-4">
-            <h3 className="text-lg font-medium mb-4">Processing Logs</h3>
-            <ProcessingLogViewer logs={processingLogs} isLoading={isLogsLoading} />
-          </div>
+        {/* Standard Debug Views */}
+        {selectedUrl && viewMode === 'standard' && (
+          <>
+            {/* URL Summary Info */}
+            <UrlDebugInfo urlInfo={selectedUrl} isLoading={false} />
+            
+            {/* Grok API Request Section */}
+            <div className="bg-white rounded-lg border border-gray-200 shadow-md p-6 mb-4">
+              <h3 className="text-lg font-medium mb-4">Grok API Request</h3>
+              {grokRequestPayload ? (
+                <pre className="bg-gray-800 text-white p-3 rounded-md text-xs overflow-x-auto max-h-60 overflow-y-auto">
+                  {JSON.stringify(grokRequestPayload, null, 2)}
+                </pre>
+              ) : (
+                <p className="text-gray-500">No API request data available</p>
+              )}
+            </div>
+            
+            {/* Grok API Response Section */}
+            <div className="bg-white rounded-lg border border-gray-200 shadow-md p-6 mb-4">
+              <h3 className="text-lg font-medium mb-4">Grok API Response</h3>
+              {grokResponsePayload ? (
+                <pre className="bg-gray-800 text-white p-3 rounded-md text-xs overflow-x-auto max-h-60 overflow-y-auto">
+                  {JSON.stringify(grokResponsePayload, null, 2)}
+                </pre>
+              ) : (
+                <p className="text-gray-500">No API response data available</p>
+              )}
+            </div>
+            
+            {/* Processing Logs */}
+            <div className="bg-white rounded-lg border border-gray-200 shadow-md p-6 mb-4">
+              <h3 className="text-lg font-medium mb-4">Processing Logs</h3>
+              <ProcessingLogViewer logs={processingLogs} isLoading={isLogsLoading} />
+            </div>
+          </>
         )}
       </div>
+      
+      {/* Debug Tools */}
+      {selectedUrl && (
+        <div className="fixed bottom-0 right-0 p-4 bg-white border-t border-l border-gray-200 rounded-tl-lg shadow-lg">
+          <div className="flex justify-between items-center">
+            <h3 className="text-sm font-semibold mr-4">Debug Tools</h3>
+            <Link 
+              href="#" 
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById('closeDebugView')?.click();
+              }}
+              className="text-xs text-gray-500 hover:text-gray-700"
+              id="closeDebugView"
+            >
+              Close Debug View
+            </Link>
+          </div>
+          <button
+            onClick={retryProcessing}
+            disabled={isRetrying}
+            className="mt-2 w-full px-4 py-2 bg-purple-600 text-white text-sm rounded hover:bg-purple-700 disabled:bg-gray-400"
+          >
+            Debug Retry
+          </button>
+        </div>
+      )}
     </div>
   );
 } 
